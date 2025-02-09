@@ -68,19 +68,29 @@ int main(int argc, char* args[])
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // ImGui UI to add here
-        ImGui::Begin("Fantasy Console");
-        
-
-        // Close button
-        if (ImGui::Button("Close"))
+        // Create the main menu bar
+        if (ImGui::BeginMainMenuBar())
         {
-            quit = true;
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Open")) { /* Handle open action */ }
+                if (ImGui::MenuItem("Save")) { /* Handle save action */ }
+                if (ImGui::MenuItem("Exit")) { quit = true; }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Edit"))
+            {
+                if (ImGui::MenuItem("Undo")) { /* Handle undo action */ }
+                if (ImGui::MenuItem("Redo")) { /* Handle redo action */ }
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("Help"))
+            {
+                if (ImGui::MenuItem("About")) { /* Show about info */ }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
         }
-
-        
-
-        ImGui::End();
 
         // Rendering
         ImGui::Render();
