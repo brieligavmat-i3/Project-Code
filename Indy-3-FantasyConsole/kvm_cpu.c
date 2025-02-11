@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 
 #include "leakcheck_util.h"
 
@@ -512,6 +513,19 @@ void kvm_cpu_decode_instr(kvm_cpu* cpu, uint8_t instruction) {
 
 	//print_instr(cpu->current_instruction);
 }
+
+#pragma region Helper functions for execution.
+static void cpu_set_processor_status(kvm_cpu* cpu, bool carry, bool zero, bool interrupt_disable, bool break_command, bool twos_complement_overflow, bool negative) {
+	uint8_t carry_set = (uint8_t)carry;
+	uint8_t zero_set = (uint8_t)zero << 1;
+	uint8_t interrupt_disable_set = (uint8_t)interrupt_disable << 2;
+	uint8_t break_command_set = (uint8_t)break_command << 4;
+	uint8_t twos_complement_overflow_set = (uint8_t)twos_complement_overflow << 6;
+	uint8_t negative_set = (uint8_t)negative << 7;
+
+	cpu->processor_status = carry_set | zero_set | interrupt_disable_set | break_command_set | twos_complement_overflow_set | negative_set;
+}
+#pragma endregion
 
 void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	kvm_instruction* instr = cpu->current_instruction;
