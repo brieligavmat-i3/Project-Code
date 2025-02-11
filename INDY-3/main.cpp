@@ -44,7 +44,7 @@ int main(int argc, char* args[])
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
-    (void)io;  // Prevent unused variable warning
+    (void)io;
 
     // Setup ImGui SDL2 + SDL_Renderer2 bindings
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
@@ -53,6 +53,8 @@ int main(int argc, char* args[])
     // Main loop
     bool quit = false;
     SDL_Event e;
+
+    bool show_add_window = false; 
 
     while (!quit)
     {
@@ -68,7 +70,7 @@ int main(int argc, char* args[])
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 
-        // Create the main menu bar
+        // Toolbars
         if (ImGui::BeginMainMenuBar())
         {
             if (ImGui::BeginMenu("File"))
@@ -86,10 +88,43 @@ int main(int argc, char* args[])
             }
             if (ImGui::BeginMenu("Help"))
             {
+                if (ImGui::MenuItem("Tutorial")) {/*Handle Tutorial action */}
                 if (ImGui::MenuItem("About")) { /* Show about info */ }
                 ImGui::EndMenu();
             }
             ImGui::EndMainMenuBar();
+        }
+
+        // Big "Add" button in the top-left 
+        ImGui::SetNextWindowPos(ImVec2(10, 40));  // Position the button
+        ImGui::SetNextWindowSize(ImVec2(130, 100));  // Fix the window size (width, height)
+        ImGui::Begin("##ButtonWindow", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar);
+        
+        ImGui::Text("Code Panel");
+        if (ImGui::Button("Add", ImVec2(110, 50))) // Button size
+        {
+            show_add_window = true;
+        }
+
+        ImGui::End();
+
+        // If "Add" button is clicked, show the new window
+        if (show_add_window)
+        {
+            ImGui::Begin("Add", &show_add_window, ImGuiWindowFlags_AlwaysAutoResize);
+
+            ImGui::Text("Instruction: ");
+
+            // List of preset buttons
+            if (ImGui::Button("Preset 1")) { /* Handle Preset 1 */ }
+            if (ImGui::Button("Preset 2")) { /* Handle Preset 2 */ }
+            if (ImGui::Button("Preset 3")) { /* Handle Preset 3 */ }
+
+            if (ImGui::Button("Close")) {
+                show_add_window = false; // Close the window
+            }
+
+            ImGui::End();
         }
 
         // Rendering
