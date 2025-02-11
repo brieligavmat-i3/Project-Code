@@ -36,9 +36,6 @@
     <ClCompile Include="..\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\test_cpu.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\imgui-master\imgui_widgets.cpp">
       <Filter>Source Files\imgui</Filter>
     </ClCompile>
@@ -72,11 +69,11 @@
     <ClCompile Include="..\vm-backend\kvm_memory.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
+    <ClCompile Include="..\vm-backend\test_cpu.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\vm-backend\kvm_memory.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\imgui-master\imstb_truetype.h">
       <Filter>Header Files\imgui</Filter>
     </ClInclude>
@@ -111,6 +108,9 @@
       <Filter>Header Files\vm-utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_cpu.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>
