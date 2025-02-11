@@ -13,90 +13,105 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Header Files\imgui">
+      <UniqueIdentifier>{cdf951ec-ac38-4f74-b276-3f660f003e8b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\vm-utilities">
+      <UniqueIdentifier>{4f454145-4aaa-49dc-a752-5aa46b931679}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\vm">
+      <UniqueIdentifier>{0d2a3a78-6aa4-4008-9058-c7590772cd5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\imgui">
+      <UniqueIdentifier>{ab6db908-2f47-457d-adfa-52edb7b0e20d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\vm-utilities">
+      <UniqueIdentifier>{66eb0e57-6068-4354-b8dd-813367a9076f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\vm">
+      <UniqueIdentifier>{05d1f5ce-c6a0-4b68-9d4c-8438c92b02f5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui-master\imgui.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\imgui_demo.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\imgui_draw.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\imgui_tables.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\imgui_widgets.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\backends\imgui_impl_sdl2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\imgui-master\backends\imgui_impl_sdlrenderer2.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="test.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\vm-backend\kvm_cpu.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\vm-backend\kvm_memory.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\vm-backend\leakcheck.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\vm-backend\linklist.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\imgui-master\imgui_widgets.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\imgui_tables.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\imgui.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\imgui_demo.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\imgui_draw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\backends\imgui_impl_sdl2.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui-master\backends\imgui_impl_sdlrenderer2.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\leakcheck.c">
+      <Filter>Source Files\vm-utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\linklist.c">
+      <Filter>Source Files\vm-utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_cpu.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_memory.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\imgui-master\imconfig.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\imgui.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\imgui_internal.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\imstb_rectpack.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\imstb_textedit.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\imstb_truetype.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\backends\imgui_impl_sdl2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\imgui-master\backends\imgui_impl_sdlrenderer2.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\vm-backend\kvm_cpu.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\imgui-master\imstb_truetype.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\imstb_textedit.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\imconfig.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\imgui.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\backends\imgui_impl_sdl2.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\backends\imgui_impl_sdlrenderer2.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\imgui_internal.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui-master\imstb_rectpack.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
     <ClInclude Include="..\vm-backend\leakcheck.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\vm-utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\leakcheck_util.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\vm-utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\linklist.h">
-      <Filter>Header Files</Filter>
+      <Filter>Header Files\vm-utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_cpu.h">
+      <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
