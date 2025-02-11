@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h> // For guranteed fixed-width integers.
+#include <stdbool.h>
 
 #include "kvm_memory.h"
 /*
@@ -50,7 +51,7 @@ typedef enum kvm_addressing_mode {
 typedef enum kvm_instruction_class {
 	kvmc_invalid,
 	kvmc_no_op, kvmc_force_interrupt, kvmc_return, 
-	kvmc_transfer, kvmc_transfer_accumulator, 
+	kvmc_transfer, kvmc_transfer_accumulator, kvmc_transfer_stack,
 	kvmc_stack_push, kvmc_stack_pull,
 	kvmc_set_flag, kvmc_clear_flag,
 
@@ -63,13 +64,15 @@ typedef enum kvm_instruction_class {
 
 	kvmc_load, kvmc_store,
 
-	kvmc_branch_if_clear, kvm_branch_if_set,
+	kvmc_branch_if_clear, kvmc_branch_if_set,
 	kvmc_jump, kvmc_jump_to_subroutine
 
 }kvm_instruction_class;
 
 typedef enum kvm_register_operand {
 	kvmr_invalid,
+
+	kvmr_none,
 
 	// Registers
 	kvmr_accumulator,
@@ -87,12 +90,14 @@ typedef enum kvm_register_operand {
 }kvm_register_operand;
 
 typedef struct kvm_instruction {
+	bool is_finished_constructing;
+
 	kvm_instruction_size instruction_size;
 	kvm_addressing_mode addressing_mode;
 	kvm_instruction_class instruction_class;
 	kvm_register_operand register_operand;
 
-	uint8_t byte1, byte2; // Byte 1 is used with instruction sizes kvmi_med and kvmi_large, while byte 2 is only used with kvmi_large.
+	uint8_t byte1, byte2; // Byte 1 is used with instruction sizes kvms_med and kvms_large, while byte 2 is only used with kvms_large.
 }kvm_instruction;
 
 typedef struct kvm_cpu {
@@ -109,9 +114,13 @@ typedef struct kvm_cpu {
 	kvm_instruction* current_instruction;
 } kvm_cpu;
 
+int odd_opcodes_out[256];
+
 uint8_t kvm_cpu_fetch_byte(kvm_memory* mem, size_t index);
 
-void kvm_cpu_decode_instr(uint8_t instruction, kvm_instruction* out_instr);
+void kvm_cpu_decode_instr(kvm_cpu *cpu, uint8_t instruction);
+
+void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem);
 
 /* Perform fetch, decode, and execute operations.
 */

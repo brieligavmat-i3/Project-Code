@@ -95,7 +95,7 @@ link_node* link_list_get_at(link_list *list, int index){
 
     // Bit of bound checking
     if (index >= list->length || index == -1){
-        index = list->length - 1;
+        index = (int)list->length - 1;
     }
     else if (index < 0){
         index = 0;
@@ -148,7 +148,7 @@ void link_list_remove_at(link_list *list, int index){
 
     // Make sure the end of the list is in the correct form
     if (index == -1){
-        index = list->length;
+        index = (int)list->length;
     }
 
     link_node *previous_node = link_list_get_at(list, index-1);
@@ -157,12 +157,12 @@ void link_list_remove_at(link_list *list, int index){
 
 void print_list_addresses(link_list *list){
 
-    printf("List length: %d\n", list->length);
+    printf("List length: %llu\n", (unsigned long long)list->length);
 
     link_node *current = list->head;
     while(current->next != NULL){
-        printf("%d, ", current->data);
+        printf("%d, ", (int)current->data);
         current = current->next;
     }
-    printf("%d.", current->data);
+    printf("%d.", (int)current->data);
 }

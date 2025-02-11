@@ -70,7 +70,7 @@ int main(int argc, char *argv[]){
 */
 
 
-int get_allocated_memory(void){
+size_t get_allocated_memory(void){
     return current_allocated_bytes;
 }
 
@@ -80,6 +80,11 @@ int get_allocated_memory(void){
 // This is deallocated by the linked list.
 static allocation *create_data(void* address, size_t size){
     allocation *result = malloc(sizeof(allocation));
+    if (!result) {
+        fprintf(stderr, "Fatal error: malloc failed.\n");
+        exit(1);
+    }
+
     result->ptr = address;
     result->size = size;
     //printf("Location of data at creation: %d\nAddr: %d\nSize: %d\n", result, result->ptr, result->size);
@@ -93,7 +98,7 @@ void print_allocation_data(){
         return;
     }
 
-    printf("Number of allocations: %d\nBytes allocated: %d\n\n", allocation_record->length-1, current_allocated_bytes);
+    printf("Number of allocations: %llu\nBytes allocated: %llu\n\n", allocation_record->length-1, current_allocated_bytes);
 
     link_node *current = allocation_record->head->next;
     int i = 1;
@@ -103,7 +108,7 @@ void print_allocation_data(){
             fprintf(stderr, "Error with linked list, item %d has a null data pointer.", i);
             continue;
         }
-        printf("item: %d\naddress: %d\nsize: %d\n\n", i, dat->ptr, dat->size);
+        printf("item: %d\naddress: %llu\nsize: %d\n\n", i, (size_t)dat->ptr, (int)dat->size);
         current = current->next;
         i++;
     }
