@@ -23,6 +23,8 @@ a, x, y, stack, PC
 
 // In the memory map, 0xE000 is the start point for program ROM information.
 #define PROGRAM_COUNTER_ENTRY_POINT 0xE000
+#define STACK_PTR_OFFSET 0x0100
+#define STACK_PTR_DEFAULT 0xFF
 #define DEFAULT_PROCESSOR_STATUS 0
 
 typedef enum kvm_instruction_size {
@@ -97,7 +99,7 @@ typedef struct kvm_instruction {
 	kvm_instruction_class instruction_class;
 	kvm_register_operand register_operand;
 
-	uint8_t byte1, byte2; // Byte 1 is used with instruction sizes kvms_med and kvms_large, while byte 2 is only used with kvms_large.
+	uint8_t lowbyte, highbyte; // lowbyte is used with instruction sizes kvms_med and kvms_large, while highbyte is only used with kvms_large.
 }kvm_instruction;
 
 typedef struct kvm_cpu {

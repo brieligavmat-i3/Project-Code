@@ -28,8 +28,8 @@ static void instr_reset_defaults(kvm_instruction* out_instr) {
 	out_instr->instruction_class = kvmc_invalid;
 	out_instr->register_operand = kvmr_invalid;
 
-	out_instr->byte1 = 0;
-	out_instr->byte2 = 0;
+	out_instr->lowbyte = 0;
+	out_instr->highbyte = 0;
 }
 
 static void instr_set(kvm_instruction* out_instr, kvm_instruction_size s, kvm_addressing_mode a, kvm_instruction_class c, kvm_register_operand r) {
@@ -525,10 +525,199 @@ static void cpu_set_processor_status(kvm_cpu* cpu, bool carry, bool zero, bool i
 
 	cpu->processor_status = carry_set | zero_set | interrupt_disable_set | break_command_set | twos_complement_overflow_set | negative_set;
 }
+
+static void push_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
+	uint8_t lowbyte = 0, highbyte = 0;
+	uint8_t stptr = cpu->stack_ptr;
+	bool twobytes = false;
+	switch (r) {
+	case kvmr_accumulator:
+		highbyte = cpu->accumulator;
+		break;
+	case kvmr_processor_status:
+		highbyte = cpu->processor_status;
+		break;
+	default:
+		// program counter
+		lowbyte = cpu->program_counter & 0x00FF;
+		highbyte = cpu->program_counter >> 8;
+		twobytes = true;
+		break;
+	}
+
+	mem->data[stptr + STACK_PTR_OFFSET] = highbyte;
+	stptr--;
+
+	if (twobytes) {
+		mem->data[stptr + STACK_PTR_OFFSET] = lowbyte;
+		stptr--;
+	}
+	// TODO: add bounds checking, throw stack overflow error.
+
+	cpu->stack_ptr = stptr;
+}
+
+static uint16_t merge_instr_bytes(kvm_instruction* instr) {
+	return (instr->lowbyte | (uint16_t)instr->highbyte << 8);
+}
+
+static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
+	uint8_t lowbyte = 0, highbyte = 0;
+	uint8_t stptr = cpu->stack_ptr;
+	bool twobytes = (r == kvmr_none);
+
+	stptr++;
+	lowbyte = mem->data[stptr + STACK_PTR_OFFSET];
+
+	if (twobytes) {
+		stptr++;
+		highbyte = mem->data[stptr + STACK_PTR_OFFSET];
+	}
+
+	// TODO: add bounds checking, throw stack overflow error.
+
+	switch (r) {
+	case kvmr_accumulator:
+		cpu->accumulator = lowbyte;
+		break;
+	case kvmr_processor_status:
+		cpu->processor_status = lowbyte;
+		break;
+	default:
+		// program counter
+		cpu->program_counter = lowbyte | ((uint16_t)highbyte << 8);
+		break;
+	}
+
+	cpu->stack_ptr = stptr;
+}
+
 #pragma endregion
 
 void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	kvm_instruction* instr = cpu->current_instruction;
+
+	uint16_t merged_instr_bytes = 0;
+	if (instr->instruction_size == kvms_large) {
+		merged_instr_bytes = merge_instr_bytes(instr);
+	}
+
+	switch (instr->instruction_class) {
+	case kvmc_return:
+		// Return from subroutine or interrupt
+		pull_stack(cpu, mem, kvmr_none);
+		break;
+	case kvmc_transfer: // TXA and TYA
+		if (instr->register_operand == kvmr_x_index) {
+			// TXA
+			cpu->accumulator = cpu->x_index;
+		}
+		else {
+			// TYA
+			cpu->accumulator = cpu->y_index;
+		}
+		break;
+	case kvmc_transfer_accumulator:
+		if (instr->register_operand == kvmr_x_index) {
+			// TAX
+			cpu->x_index = cpu->accumulator;
+		}
+		else {
+			// TAY
+			cpu->y_index = cpu->accumulator;
+		}
+		break;
+	case kvmc_transfer_stack:
+		if (instr->register_operand == kvmr_x_index) {
+			// TXS
+			cpu->stack_ptr = cpu->x_index;
+		}
+		else {
+			// TSX
+			cpu->x_index = cpu->stack_ptr;
+		}
+		break;
+	case kvmc_stack_push:
+		push_stack(cpu, mem, instr->register_operand);
+		break;
+	case kvmc_stack_pull:
+		pull_stack(cpu, mem, instr->register_operand);
+		break;
+	case kvmc_set_flag:
+		switch (instr->register_operand) {
+		case kvmr_flag_carry:
+			cpu->processor_status = cpu->processor_status | 0b00000001;
+			break;
+		}
+	case kvmc_clear_flag:
+		switch (instr->register_operand) {
+		case kvmr_flag_carry:
+			cpu->processor_status = cpu->processor_status & 0b11111110;
+			break;
+		case kvmr_flag_overflow:
+			cpu->processor_status = cpu->processor_status & 0b10111111;
+			break;
+		}
+		break;
+	case kvmc_and:
+		break;
+	case kvmc_or:
+		break;
+	case kvmc_xor:
+		break;
+	case kvmc_bit_test:
+		break;
+	case kvmc_add:
+		break;
+	case kvmc_subtract:
+		break;
+	case kvmc_compare:
+		break;
+	case kvmc_increment:
+		break;
+	case kvmc_decrement:
+		break;
+	case kvmc_shift_left:
+		break;
+	case kvmc_shift_right:
+		break;
+	case kvmc_rotate_left:
+		break;
+	case kvmc_rotate_right:
+		break;
+	case kvmc_load:
+		break;
+	case kvmc_store:
+		break;
+	case kvmc_branch_if_clear:
+		break;
+	case kvmc_branch_if_set:
+		break;
+	case kvmc_jump:
+		if (instr->addressing_mode == kvma_indirect) {
+			// Do this crazy thing.
+			
+			uint8_t lbyte, hbyte;
+			uint16_t actual_target = merged_instr_bytes;
+
+			lbyte = mem->data[actual_target];
+			hbyte = mem->data[actual_target + 1];
+
+			actual_target = lbyte | ((uint16_t)hbyte << 8);
+			cpu->program_counter = actual_target;
+
+		}
+		else {
+			// Absolute jump (normal)
+			cpu->program_counter = merged_instr_bytes; // Jump!
+		}
+		break;
+	case kvmc_jump_to_subroutine:
+		push_stack(cpu, mem, kvmr_none); // Store the current program counter.
+		cpu->program_counter = merged_instr_bytes; // Jump!
+		break;
+
+	}
 }
 
 
@@ -540,18 +729,19 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 	kvm_cpu_decode_instr(current_opcode, cpu->current_instruction);
 
 
-
 	// Operand fetch
 	switch (cpu->current_instruction->instruction_size) {
 	case kvms_med:		// Fetch one more byte
-		cpu->current_instruction->byte1 = kvm_cpu_fetch_byte(mem, pc++);
+		cpu->current_instruction->lowbyte = kvm_cpu_fetch_byte(mem, pc++);
 		break;
 	case kvms_large:	// Fetch two more bytes
-		cpu->current_instruction->byte1 = kvm_cpu_fetch_byte(mem, pc++);
-		cpu->current_instruction->byte2 = kvm_cpu_fetch_byte(mem, pc++);
+		cpu->current_instruction->lowbyte = kvm_cpu_fetch_byte(mem, pc++);
+		cpu->current_instruction->highbyte = kvm_cpu_fetch_byte(mem, pc++);
 		break;
 	default:break;
 	}
+
+	cpu->program_counter = pc;
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*
@@ -569,7 +759,7 @@ kvm_cpu* kvm_cpu_init(void) {
 	cpu->x_index = 0;
 	cpu->y_index = 0;
 
-	cpu->stack_ptr = 0;
+	cpu->stack_ptr = STACK_PTR_DEFAULT;
 
 	cpu->program_counter = PROGRAM_COUNTER_ENTRY_POINT;
 

@@ -13,7 +13,7 @@ void quit(void);
 
 int main(int argc, char* argv[]) {
 	
-	kvm_memory* mem = kvm_memory_init(0xFFFF, 0);
+	kvm_memory* mem = kvm_memory_init(0x1000, 0);
 	kvm_cpu* cpu = kvm_cpu_init();
 
 	if (mem && cpu && cpu->current_instruction) {
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 		kvm_cpu_decode_instr(cpu, i);
 	}
 
-	kvm_memory_print_hexdump(mem, 0, 4096, 16);
+	kvm_memory_print_hexdump(mem, 0, 1024);
 
 
 	kvm_cpu_free(cpu);
