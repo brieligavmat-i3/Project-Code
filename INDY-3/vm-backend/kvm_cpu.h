@@ -27,6 +27,13 @@ a, x, y, stack, PC
 #define STACK_PTR_DEFAULT 0xFF
 #define DEFAULT_PROCESSOR_STATUS 0
 
+#define CPU_CARRY_FLAG 0x01
+#define CPU_ZERO_FLAG 0x02
+#define CPU_INTERRUPT_DISABLE_FLAG 0x04
+#define CPU_BREAK_FLAG 0x10
+#define CPU_OVERFLOW_FLAG 0x40
+#define CPU_NEGATIVE_FLAG 0x80
+
 typedef enum kvm_instruction_size {
 	kvms_small = 1, kvms_med = 2, kvms_large = 3, 
 	kvms_invalid = 0	// Used for error handling

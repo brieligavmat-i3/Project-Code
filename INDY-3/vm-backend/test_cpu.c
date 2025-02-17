@@ -33,7 +33,6 @@ int main(int argc, char* argv[]) {
 
 	kvm_memory_print_hexdump(mem, 0, 1024);
 
-
 	kvm_cpu_free(cpu);
 	kvm_memory_free(mem);
 	quit();

@@ -519,6 +519,7 @@ static void cpu_set_processor_status(kvm_cpu* cpu, bool carry, bool zero, bool i
 	uint8_t carry_set = (uint8_t)carry;
 	uint8_t zero_set = (uint8_t)zero << 1;
 	uint8_t interrupt_disable_set = (uint8_t)interrupt_disable << 2;
+
 	uint8_t break_command_set = (uint8_t)break_command << 4;
 	uint8_t twos_complement_overflow_set = (uint8_t)twos_complement_overflow << 6;
 	uint8_t negative_set = (uint8_t)negative << 7;
@@ -592,6 +593,61 @@ static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 	cpu->stack_ptr = stptr;
 }
 
+void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr, uint8_t* out_value, uint16_t* out_address) {
+	uint16_t target_address = (uint16_t)instr->lowbyte;
+	uint8_t value_at_address = 0;
+
+	// All large instructions require the full two-byte address.
+	if (instr->instruction_size == kvms_large) {
+		target_address = merge_instr_bytes(instr);
+	}
+
+	switch (instr->addressing_mode)
+	{
+	case kvma_zpx:
+	case kvma_abx:
+		target_address += cpu->x_index;
+		break;
+	case kvma_aby:
+	case kvma_zpy:
+		target_address += cpu->y_index;
+		break;
+	case kvma_indx:
+	{
+		target_address += cpu->x_index;
+		uint8_t lbyte, hbyte;
+
+		lbyte = mem->data[target_address];
+		hbyte = mem->data[target_address + 1];
+
+		target_address = lbyte | ((uint16_t)hbyte << 8);
+	}
+	case kvma_yind:
+	{
+		uint8_t lbyte, hbyte;
+
+		lbyte = mem->data[target_address];
+		hbyte = mem->data[target_address + 1];
+
+		target_address = lbyte | ((uint16_t)hbyte << 8);
+		target_address += cpu->y_index;
+	}
+	default:
+		break;
+	}
+
+	if (instr->addressing_mode == kvma_immediate) {
+		// Immediately load the value and then return.
+		value_at_address = (uint8_t)target_address;
+	}
+	else {
+		value_at_address = mem->data[target_address];
+	}
+
+	*out_address = target_address;
+	*out_value = value_at_address;
+}
+
 #pragma endregion
 
 void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
@@ -601,6 +657,10 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	if (instr->instruction_size == kvms_large) {
 		merged_instr_bytes = merge_instr_bytes(instr);
 	}
+
+	// For regular operations
+	uint16_t target_address = (uint16_t)instr->lowbyte;
+	uint8_t value_at_address = 0;
 
 	switch (instr->instruction_class) {
 	case kvmc_return:
@@ -646,16 +706,16 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	case kvmc_set_flag:
 		switch (instr->register_operand) {
 		case kvmr_flag_carry:
-			cpu->processor_status = cpu->processor_status | 0b00000001;
+			cpu->processor_status = cpu->processor_status | CPU_CARRY_FLAG;
 			break;
 		}
 	case kvmc_clear_flag:
 		switch (instr->register_operand) {
 		case kvmr_flag_carry:
-			cpu->processor_status = cpu->processor_status & 0b11111110;
+			cpu->processor_status = cpu->processor_status & (0xFF ^ CPU_CARRY_FLAG);
 			break;
 		case kvmr_flag_overflow:
-			cpu->processor_status = cpu->processor_status & 0b10111111;
+			cpu->processor_status = cpu->processor_status & (0xFF ^ CPU_OVERFLOW_FLAG);
 			break;
 		}
 		break;
@@ -686,12 +746,108 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	case kvmc_rotate_right:
 		break;
 	case kvmc_load:
+	{
+		get_address_and_value(cpu, mem, instr, value_at_address, target_address);
+		switch (instr->register_operand)
+		{
+		case kvmr_accumulator:
+			cpu->accumulator = value_at_address;
+			break;
+		case kvmr_x_index:
+			cpu->x_index = value_at_address;
+			break;
+		case kvmr_y_index:
+			cpu->y_index = value_at_address;
+		default:
+			break;
+		}
+	}
 		break;
 	case kvmc_store:
+	{
+		get_address_and_value(cpu, mem, instr, value_at_address, target_address);
+		switch (instr->register_operand)
+		{
+		case kvmr_accumulator:
+			mem->data[target_address] = cpu->accumulator;
+			break;
+		case kvmr_x_index:
+			mem->data[target_address] = cpu->x_index;
+			break;
+		case kvmr_y_index:
+			mem->data[target_address] = cpu->y_index;
+		default:
+			break;
+		}
+	}
 		break;
 	case kvmc_branch_if_clear:
-		break;
+	{
+		bool condition = false;
+		switch (instr->register_operand) {
+		case kvmr_flag_carry:
+			condition = !(cpu->processor_status & CPU_CARRY_FLAG);
+			break;
+		case kvmr_flag_zero:
+			condition = !(cpu->processor_status & CPU_ZERO_FLAG);
+			break;
+		case kvmr_flag_negative:
+			condition = !(cpu->processor_status & CPU_NEGATIVE_FLAG);
+			break;
+		case kvmr_flag_overflow:
+			condition = !(cpu->processor_status & CPU_OVERFLOW_FLAG);
+			break;
+		default:
+			break;
+		}
+
+		if (!condition) {
+			break;
+		}
+
+		if (instr->addressing_mode == kvma_relative) {
+			// Relative branching
+			cpu->program_counter += (int8_t)instr->lowbyte; // Cast to signed byte to allow reverse branching.
+		}
+		else {
+			// Absolute branching
+			cpu->program_counter = merged_instr_bytes;
+		}
+	}
+	break;
 	case kvmc_branch_if_set:
+	{
+		bool condition = false;
+		switch (instr->register_operand) {
+		case kvmr_flag_carry:
+			condition = cpu->processor_status & CPU_CARRY_FLAG;
+			break;
+		case kvmr_flag_zero:
+			condition = cpu->processor_status & CPU_ZERO_FLAG;
+			break;
+		case kvmr_flag_negative:
+			condition = cpu->processor_status & CPU_NEGATIVE_FLAG;
+			break;
+		case kvmr_flag_overflow:
+			condition = cpu->processor_status & CPU_OVERFLOW_FLAG;
+			break;
+		default:
+			break;
+		}
+
+		if (!condition) {
+			break;
+		}
+
+		if (instr->addressing_mode == kvma_relative) {
+			// Relative branching
+			cpu->program_counter += (int8_t)instr->lowbyte; // Cast to signed byte to allow reverse branching.
+		}
+		else {
+			// Absolute branching
+			cpu->program_counter = merged_instr_bytes;
+		}
+	}
 		break;
 	case kvmc_jump:
 		if (instr->addressing_mode == kvma_indirect) {
