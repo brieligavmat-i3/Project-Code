@@ -19,19 +19,38 @@ int main(int argc, char* argv[]) {
 	if (mem && cpu && cpu->current_instruction) {
 		printf("Success?\nInstruction size: %d\nMemory size: %llu\n\n", (int)cpu->current_instruction->instruction_size, (unsigned long long)mem->size);
 	}
+	else {
+		fprintf(stderr, "Error initializing memory, cpu, or current instruction.");
+		return -1;
+	}
+
 	print_allocation_data();
 
 	//kvm_cpu_decode_instr(cpu, 0x00); // Should be NOP
 	//kvm_cpu_decode_instr(cpu, 0xE9); // JMP absolute?
 	//kvm_cpu_decode_instr(cpu, 0x2F); // ROR implicit
 
-	// Here we go.
-	for (uint8_t i = 1; i != 0; i++) {
-		//printf("\nOpcode %x\n", i);
-		kvm_cpu_decode_instr(cpu, i);
+	//// Here we go.
+	//for (uint8_t i = 1; i != 0; i++) {
+	//	//printf("\nOpcode %x\n", i);
+	//	kvm_cpu_decode_instr(cpu, i);
+	//}
+									// LDA #01, STA $00, etc
+	uint8_t instruction_bytes[] = { 0xD0,0x01,0x54,0x00,0xD0,0x02,0x54,0x01,0xD0,0x02,0x54,0x02};
+	printf("\ninstructions size: %d\n", (int)sizeof(instruction_bytes));
+	for (int i = 0; i < sizeof(instruction_bytes); i++) {
+		mem->data[i + PROGRAM_COUNTER_ENTRY_POINT] = instruction_bytes[i];
+	}
+	
+	for (int i = 0; i < 6; i++) {
+		kvm_cpu_cycle(cpu, mem);
+		printf("\n\n");
+		kvm_cpu_print_status(cpu);
 	}
 
-	kvm_memory_print_hexdump(mem, 0, 1024);
+	kvm_memory_print_hexdump(mem, 0, 1024); 
+	printf("\n\n");
+	kvm_cpu_print_status(cpu);
 
 	kvm_cpu_free(cpu);
 	kvm_memory_free(mem);

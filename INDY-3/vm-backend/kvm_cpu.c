@@ -503,13 +503,13 @@ static void print_instr(kvm_instruction* instr) {
 
 #pragma endregion
 
-void kvm_cpu_decode_instr(kvm_cpu* cpu, uint8_t instruction) {
+void kvm_cpu_decode_instr(kvm_instruction *out_instr, uint8_t instruction) {
 	
-	instr_reset_defaults(cpu->current_instruction);
+	instr_reset_defaults(out_instr);
 
-	decode_instr_size(instruction, cpu->current_instruction);
-	decode_instr_addressing_mode(instruction, cpu->current_instruction);
-	decode_instr_class(instruction, cpu->current_instruction);
+	decode_instr_size(instruction, out_instr);
+	decode_instr_addressing_mode(instruction, out_instr);
+	decode_instr_class(instruction, out_instr);
 
 	//print_instr(cpu->current_instruction);
 }
@@ -747,7 +747,7 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		break;
 	case kvmc_load:
 	{
-		get_address_and_value(cpu, mem, instr, value_at_address, target_address);
+		get_address_and_value(cpu, mem, instr, &value_at_address, &target_address);
 		switch (instr->register_operand)
 		{
 		case kvmr_accumulator:
@@ -765,7 +765,7 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		break;
 	case kvmc_store:
 	{
-		get_address_and_value(cpu, mem, instr, value_at_address, target_address);
+		get_address_and_value(cpu, mem, instr, &value_at_address, &target_address);
 		switch (instr->register_operand)
 		{
 		case kvmr_accumulator:
@@ -882,7 +882,7 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 
 	uint8_t current_opcode = kvm_cpu_fetch_byte(mem, pc++);
 
-	kvm_cpu_decode_instr(current_opcode, cpu->current_instruction);
+	kvm_cpu_decode_instr(cpu->current_instruction, current_opcode);
 
 
 	// Operand fetch
@@ -906,6 +906,10 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 	Based on instruction type, fetch the next 0, 1, or 2 bytes, and increment the program counter that much.
 	Execute the proper instruction.
 	*/
+}
+
+void kvm_cpu_print_status(kvm_cpu* cpu) {
+	printf("Program Counter: %x\nAccumulator: %x\nX: %x\nY: %x\nStack Pointer: %x\nProcessor Status: %x\n", cpu->program_counter, cpu->accumulator, cpu->x_index, cpu->y_index, cpu->stack_ptr, cpu->processor_status);
 }
 
 kvm_cpu* kvm_cpu_init(void) {

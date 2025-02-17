@@ -22,7 +22,8 @@ a, x, y, stack, PC
 */
 
 // In the memory map, 0xE000 is the start point for program ROM information.
-#define PROGRAM_COUNTER_ENTRY_POINT 0xE000
+//#define PROGRAM_COUNTER_ENTRY_POINT 0xE000
+#define PROGRAM_COUNTER_ENTRY_POINT 0x0200
 #define STACK_PTR_OFFSET 0x0100
 #define STACK_PTR_DEFAULT 0xFF
 #define DEFAULT_PROCESSOR_STATUS 0
@@ -127,13 +128,15 @@ int odd_opcodes_out[256];
 
 uint8_t kvm_cpu_fetch_byte(kvm_memory* mem, size_t index);
 
-void kvm_cpu_decode_instr(kvm_cpu *cpu, uint8_t instruction);
+void kvm_cpu_decode_instr(kvm_instruction *out_instr, uint8_t instruction);
 
 void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem);
 
 /* Perform fetch, decode, and execute operations.
 */
 void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem);
+
+void kvm_cpu_print_status(kvm_cpu* cpu);
 
 // Initializes the CPU and zeroes out its values.
 kvm_cpu* kvm_cpu_init(void);
