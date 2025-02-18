@@ -35,7 +35,7 @@ void kvm_memory_free(kvm_memory *mem) {
 uint8_t kvm_memory_get_byte(kvm_memory* mem, size_t index) {
 	if (!mem) return 0;
 
-	if (index > 0 && index < mem->size) {
+	if (index >= 0 && index < mem->size) {
 		return mem->data[index];
 	}
 	else {

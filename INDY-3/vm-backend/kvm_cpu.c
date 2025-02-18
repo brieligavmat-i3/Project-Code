@@ -527,6 +527,27 @@ static void cpu_set_processor_status(kvm_cpu* cpu, bool carry, bool zero, bool i
 	cpu->processor_status = carry_set | zero_set | interrupt_disable_set | break_command_set | twos_complement_overflow_set | negative_set;
 }
 
+static void cpu_set_status_flag(kvm_cpu* cpu, uint8_t flag, bool set) {
+	if (set) {
+		// set a flag
+		cpu->processor_status |= flag;
+	}
+	else {
+		// clear one flag
+		cpu->processor_status &= (0xFF ^ flag);
+	}
+}
+
+// Most operations set the zero and negative flags exclusively. This does that.
+static void update_zero_and_negative_flags(kvm_cpu* cpu, uint8_t value) {
+	// Set status flags
+	bool zero_set = (value == 0);
+	bool neg_set = extract_bits(value, 0x80, 0); // check bit 7
+
+	cpu_set_status_flag(cpu, CPU_ZERO_FLAG, zero_set);
+	cpu_set_status_flag(cpu, CPU_NEGATIVE_FLAG, neg_set);
+}
+
 static void push_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 	uint8_t lowbyte = 0, highbyte = 0;
 	uint8_t stptr = cpu->stack_ptr;
@@ -580,6 +601,9 @@ static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 	switch (r) {
 	case kvmr_accumulator:
 		cpu->accumulator = lowbyte;
+
+		// Pull accumulator is the only stack operation which updates status flags.
+		update_zero_and_negative_flags(cpu, lowbyte);
 		break;
 	case kvmr_processor_status:
 		cpu->processor_status = lowbyte;
@@ -593,7 +617,7 @@ static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 	cpu->stack_ptr = stptr;
 }
 
-void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr, uint8_t* out_value, uint16_t* out_address) {
+static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr, uint8_t* out_value, uint16_t* out_address) {
 	uint16_t target_address = (uint16_t)instr->lowbyte;
 	uint8_t value_at_address = 0;
 
@@ -648,6 +672,8 @@ void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr
 	*out_value = value_at_address;
 }
 
+
+
 #pragma endregion
 
 void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
@@ -659,8 +685,10 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	}
 
 	// For regular operations
-	uint16_t target_address = (uint16_t)instr->lowbyte;
-	uint8_t value_at_address = 0;
+	uint16_t target_address;
+	uint8_t value_at_address;
+
+	get_address_and_value(cpu, mem, instr, &value_at_address, &target_address);
 
 	switch (instr->instruction_class) {
 	case kvmc_return:
@@ -676,8 +704,10 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 			// TYA
 			cpu->accumulator = cpu->y_index;
 		}
+		update_zero_and_negative_flags(cpu, cpu->accumulator);
 		break;
 	case kvmc_transfer_accumulator:
+		update_zero_and_negative_flags(cpu, cpu->accumulator);
 		if (instr->register_operand == kvmr_x_index) {
 			// TAX
 			cpu->x_index = cpu->accumulator;
@@ -695,6 +725,7 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		else {
 			// TSX
 			cpu->x_index = cpu->stack_ptr;
+			update_zero_and_negative_flags(cpu, cpu->x_index);
 		}
 		break;
 	case kvmc_stack_push:
@@ -706,9 +737,12 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	case kvmc_set_flag:
 		switch (instr->register_operand) {
 		case kvmr_flag_carry:
-			cpu->processor_status = cpu->processor_status | CPU_CARRY_FLAG;
+			cpu->processor_status |= CPU_CARRY_FLAG;
+			uint8_t carry = cpu->processor_status & CPU_CARRY_FLAG;
+
 			break;
 		}
+		break;
 	case kvmc_clear_flag:
 		switch (instr->register_operand) {
 		case kvmr_flag_carry:
@@ -720,16 +754,77 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		}
 		break;
 	case kvmc_and:
+		cpu->accumulator &= value_at_address;
+		update_zero_and_negative_flags(cpu, cpu->accumulator);
 		break;
 	case kvmc_or:
+		cpu->accumulator |= value_at_address;
+		update_zero_and_negative_flags(cpu, cpu->accumulator);
 		break;
 	case kvmc_xor:
+		cpu->accumulator ^= value_at_address;
+		update_zero_and_negative_flags(cpu, cpu->accumulator);
 		break;
 	case kvmc_bit_test:
+	{
+		uint8_t test_value = cpu->accumulator & value_at_address;
+		update_zero_and_negative_flags(cpu, test_value);
+		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, (test_value & 0x40)); // set bit 6.
+	}
 		break;
 	case kvmc_add:
+	{
+		uint8_t carry = cpu->processor_status & CPU_CARRY_FLAG;
+
+		uint8_t op1 = cpu->accumulator, op2 = value_at_address;
+		uint8_t result = op1 + op2 + carry;
+	
+		// Unsigned addition overflow (set or clear carry flag)
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, result < op1);
+
+		/*
+		* to test overflow flag (twos-complement overflow):
+		* XOR bit 7 of both operands. if 1, clear overflow flag
+		* AND bit 7 of both operands
+		* Compare it with bit 7 of the result.
+		* Should be the same, if not, set overflow flag.
+		*/
+
+		// If they're not the same sign, clear the flag.
+		// Otherwise, check the sign bits of the operands and the result. If they are not the same, set the flag.
+		bool same_sign = !((op1 ^ op2) >> 7);
+		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, same_sign && op1 >> 7 != result >> 7);
+		
+		update_zero_and_negative_flags(cpu, result);
+
+		cpu->accumulator = result;
+	}
 		break;
 	case kvmc_subtract:
+	{
+		uint8_t carry = cpu->processor_status & CPU_CARRY_FLAG;
+
+		uint8_t op1 = cpu->accumulator, op2 = value_at_address;
+		uint8_t result = op1 - op2 - (1 - carry);
+
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, result < op1);
+
+		/*
+		* to test overflow flag (twos-complement overflow):
+		* XOR bit 7 of both operands. if 0, clear overflow flag (if the signs are the same, it can't overflow).
+		* AND bit 7 of op1 and !bit7 of op2
+		* Compare with bit 7 of result.
+		* Should be the same, if not, set overflow flag.
+		*/
+
+		bool same_sign = !((op1 ^ op2) >> 7);
+		//cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, !same_sign && (op1& (op2 ^ 0xFF)) >> 7 != (result >> 7));
+		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, !same_sign && op1 >> 7 != result >> 7);
+
+		update_zero_and_negative_flags(cpu, result);
+
+		cpu->accumulator = result;
+	}
 		break;
 	case kvmc_compare:
 		break;
@@ -747,7 +842,6 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		break;
 	case kvmc_load:
 	{
-		get_address_and_value(cpu, mem, instr, &value_at_address, &target_address);
 		switch (instr->register_operand)
 		{
 		case kvmr_accumulator:
@@ -761,24 +855,31 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		default:
 			break;
 		}
+
+		// Set status flags
+		update_zero_and_negative_flags(cpu, value_at_address);
 	}
 		break;
 	case kvmc_store:
 	{
-		get_address_and_value(cpu, mem, instr, &value_at_address, &target_address);
+
 		switch (instr->register_operand)
 		{
 		case kvmr_accumulator:
-			mem->data[target_address] = cpu->accumulator;
+			value_at_address = cpu->accumulator;
 			break;
 		case kvmr_x_index:
-			mem->data[target_address] = cpu->x_index;
+			value_at_address = cpu->x_index;
 			break;
 		case kvmr_y_index:
-			mem->data[target_address] = cpu->y_index;
+			value_at_address = cpu->y_index;
 		default:
 			break;
 		}
+
+		
+
+		mem->data[target_address] = value_at_address;
 	}
 		break;
 	case kvmc_branch_if_clear:
@@ -898,6 +999,8 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 	}
 
 	cpu->program_counter = pc;
+
+	kvm_cpu test_cpu = *cpu;
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*

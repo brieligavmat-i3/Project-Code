@@ -8,18 +8,6 @@
 #include <stdbool.h>
 
 #include "kvm_memory.h"
-/*
-
-Hm.
-
-fetch
-decode
-execute
-
-registers:
-a, x, y, stack, PC
-
-*/
 
 // In the memory map, 0xE000 is the start point for program ROM information.
 //#define PROGRAM_COUNTER_ENTRY_POINT 0xE000
@@ -27,6 +15,8 @@ a, x, y, stack, PC
 #define STACK_PTR_OFFSET 0x0100
 #define STACK_PTR_DEFAULT 0xFF
 #define DEFAULT_PROCESSOR_STATUS 0
+
+// Processor status flags
 
 #define CPU_CARRY_FLAG 0x01
 #define CPU_ZERO_FLAG 0x02
