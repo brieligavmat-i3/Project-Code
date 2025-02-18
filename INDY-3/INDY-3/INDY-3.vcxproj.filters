@@ -72,6 +72,12 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
+    <ClCompile Include="..\vm-backend\assembler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\test_assembler.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\imstb_truetype.h">
@@ -112,6 +118,9 @@
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\assembler.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
