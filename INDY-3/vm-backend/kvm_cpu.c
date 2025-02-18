@@ -768,8 +768,9 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	case kvmc_bit_test:
 	{
 		uint8_t test_value = cpu->accumulator & value_at_address;
-		update_zero_and_negative_flags(cpu, test_value);
-		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, (test_value & 0x40)); // set bit 6.
+		cpu_set_status_flag(cpu, CPU_ZERO_FLAG, test_value);
+		cpu_set_status_flag(cpu, CPU_NEGATIVE_FLAG, (value_at_address & 0x80));
+		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, (value_at_address & 0x40)); // set bit 6.
 	}
 		break;
 	case kvmc_add:
@@ -827,18 +828,191 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	}
 		break;
 	case kvmc_compare:
+	{
+		/* CMP, CPX, and CPY compare a register value with a memory value.
+		* It does this by subtracting register - memory value
+		* If the register >= the memory value, carry flag is set
+		* If the result is 0, the zero flag is set (the operands are equal)
+		* If bit 7 is set, set the negative flag.
+		* 
+		* The only saved result of this instruction is in the status flags.
+		*/
+
+		uint8_t current = 0;
+		switch (instr->register_operand) {
+		case kvmr_accumulator:
+			current = cpu->accumulator;
+			break;
+		case kvmr_x_index:
+			current = cpu->x_index;
+			break;
+		case kvmr_y_index:
+			current = cpu->y_index;
+			break;
+		default:
+			break;
+		}
+
+		uint8_t result = current - value_at_address;
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, (current >= value_at_address));
+		cpu_set_status_flag(cpu, CPU_ZERO_FLAG, (result == 0));
+		cpu_set_status_flag(cpu, CPU_NEGATIVE_FLAG, (result >> 7));
+	}
 		break;
 	case kvmc_increment:
+	{
+		uint8_t current = 0;
+		switch (instr->register_operand) {
+		case kvmr_none:
+			current = value_at_address;
+			break;
+		case kvmr_x_index:
+			current = cpu->x_index;
+			break;
+		case kvmr_y_index:
+			current = cpu->y_index;
+			break;
+		default:
+			break;
+		}
+
+		if (instr->addressing_mode == kvma_immediate) {
+			current += value_at_address;
+		}
+		else {
+			current++;
+		}
+		update_zero_and_negative_flags(cpu, current);
+
+		switch (instr->register_operand) {
+		case kvmr_none:
+			mem->data[target_address] = current;
+			break;
+		case kvmr_x_index:
+			cpu->x_index = current;
+			break;
+		case kvmr_y_index:
+			cpu->y_index = current;
+			break;
+		default:
+			break;
+		}
+		
+	}
 		break;
 	case kvmc_decrement:
+	{
+		uint8_t current = 0;
+		switch (instr->register_operand) {
+		case kvmr_none:
+			current = value_at_address;
+			break;
+		case kvmr_x_index:
+			current = cpu->x_index;
+			break;
+		case kvmr_y_index:
+			current = cpu->y_index;
+			break;
+		default:
+			break;
+		}
+
+		if (instr->addressing_mode == kvma_immediate) {
+			current -= value_at_address;
+		}
+		else {
+			current--;
+		}
+		update_zero_and_negative_flags(cpu, current);
+
+		switch (instr->register_operand) {
+		case kvmr_none:
+			mem->data[target_address] = current;
+			break;
+		case kvmr_x_index:
+			cpu->x_index = current;
+			break;
+		case kvmr_y_index:
+			cpu->y_index = current;
+			break;
+		default:
+			break;
+		}
+	}
 		break;
 	case kvmc_shift_left:
+	{
+		uint8_t old_bit_7, result;
+		if (instr->addressing_mode == kvma_implicit) {
+			old_bit_7 = cpu->accumulator & 0x80;
+			result = cpu->accumulator << 1;
+			cpu->accumulator = result;
+		}
+		else {
+			old_bit_7 = value_at_address & 0x80;
+			result = value_at_address << 1;
+			mem->data[target_address] = result;
+		}
+		update_zero_and_negative_flags(cpu, result);
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, old_bit_7);
+
+	}
 		break;
 	case kvmc_shift_right:
+	{
+		uint8_t old_bit_0, result;
+		if (instr->addressing_mode == kvma_implicit) {
+			old_bit_0 = cpu->accumulator & 0x01;
+			result = cpu->accumulator >> 1;
+			cpu->accumulator = result;
+		}
+		else {
+			old_bit_0 = value_at_address & 0x01;
+			result = value_at_address >> 1;
+			mem->data[target_address] = result;
+		}
+		update_zero_and_negative_flags(cpu, result);
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, old_bit_0);
+
+	}
 		break;
 	case kvmc_rotate_left:
+	{
+		uint8_t old_carry = cpu->processor_status & CPU_CARRY_FLAG;
+		uint8_t old_bit_7, result;
+		if (instr->addressing_mode == kvma_implicit) {
+			old_bit_7 = cpu->accumulator & 0x80;
+			result = cpu->accumulator << 1 | old_carry;
+			cpu->accumulator = result;
+		}
+		else {
+			old_bit_7 = value_at_address & 0x80;
+			result = value_at_address << 1 | old_carry;
+			mem->data[target_address] = result;
+		}
+		update_zero_and_negative_flags(cpu, result);
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, old_bit_7);
+
+	}
 		break;
 	case kvmc_rotate_right:
+	{
+		uint8_t old_carry = (cpu->processor_status & CPU_CARRY_FLAG) << 7;
+		uint8_t old_bit_0, result;
+		if (instr->addressing_mode == kvma_implicit) {
+			old_bit_0 = cpu->accumulator & 0x01;
+			result = cpu->accumulator >> 1 | old_carry;
+			cpu->accumulator = result;
+		}
+		else {
+			old_bit_0 = value_at_address & 0x01;
+			result = value_at_address >> 1 | old_carry;
+			mem->data[target_address] = result;
+		}
+		update_zero_and_negative_flags(cpu, result);
+		cpu_set_status_flag(cpu, CPU_CARRY_FLAG, old_bit_0);
+
+	}
 		break;
 	case kvmc_load:
 	{
