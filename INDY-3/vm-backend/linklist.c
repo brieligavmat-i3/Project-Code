@@ -155,6 +155,7 @@ void link_list_remove_at(link_list *list, int index){
     link_node_remove_next(previous_node);
 }
 
+/*
 void print_list_addresses(link_list *list){
 
     printf("List length: %llu\n", (unsigned long long)list->length);
@@ -166,3 +167,4 @@ void print_list_addresses(link_list *list){
     }
     printf("%d.", (int)current->data);
 }
+*/

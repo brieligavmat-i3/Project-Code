@@ -5,6 +5,7 @@
 #include <stdio.h>
 
 #include "leakcheck_util.h"
+#include "assembler.h"
 
 
 void quit(void);

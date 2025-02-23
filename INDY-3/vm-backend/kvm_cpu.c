@@ -1051,8 +1051,6 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 			break;
 		}
 
-		
-
 		mem->data[target_address] = value_at_address;
 	}
 		break;
@@ -1174,7 +1172,9 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 
 	cpu->program_counter = pc;
 
+	#ifdef KVM_CPU_TESTING
 	kvm_cpu test_cpu = *cpu;
+	#endif
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*

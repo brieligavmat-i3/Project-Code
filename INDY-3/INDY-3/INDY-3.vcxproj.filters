@@ -31,6 +31,9 @@
     <Filter Include="Source Files\vm">
       <UniqueIdentifier>{05d1f5ce-c6a0-4b68-9d4c-8438c92b02f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\assembler">
+      <UniqueIdentifier>{703372cc-78f8-4226-8ba1-386a7de7c568}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -73,10 +76,13 @@
       <Filter>Source Files\vm</Filter>
     </ClCompile>
     <ClCompile Include="..\vm-backend\assembler.c">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\assembler</Filter>
     </ClCompile>
     <ClCompile Include="..\vm-backend\test_assembler.c">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\assembler</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\str_uint16_hash.c">
+      <Filter>Source Files\vm-utilities</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -121,6 +127,9 @@
     </ClInclude>
     <ClInclude Include="..\vm-backend\assembler.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\str_uint16_hash.h">
+      <Filter>Header Files\vm-utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

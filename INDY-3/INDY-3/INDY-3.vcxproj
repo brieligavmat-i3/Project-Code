@@ -34,7 +34,10 @@
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
     <ClCompile Include="..\vm-backend\linklist.c" />
-    <ClCompile Include="..\vm-backend\test_assembler.c" />
+    <ClCompile Include="..\vm-backend\str_uint16_hash.c" />
+    <ClCompile Include="..\vm-backend\test_assembler.c">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
@@ -54,6 +57,7 @@
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
+    <ClInclude Include="..\vm-backend\str_uint16_hash.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -144,7 +148,7 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_CONSOLE;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
     </ClCompile>
     <Link>
