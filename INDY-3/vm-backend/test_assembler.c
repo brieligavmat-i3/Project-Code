@@ -11,7 +11,12 @@
 void quit(void);
 
 int main(int argc, char* argv[]) {
+	char filename[50];
+	
+	printf("Filename to assemble: ");
+	if (scanf("%50s", filename) != 1 ) return -1;
 
+	assemble_file(filename, "out.bin");
 	
 	quit();
 

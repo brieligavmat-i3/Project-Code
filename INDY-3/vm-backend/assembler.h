@@ -18,3 +18,5 @@ typedef struct byte_list {
 	size_t index;
 }byte_list;
 
+void assemble_file(char* input_filename, char* output_filename);
+
