@@ -1,2 +1,5 @@
-LDA #$FF
-STA #$00
+
+.my_data
+DAT $100
+BRK
+  nOp
