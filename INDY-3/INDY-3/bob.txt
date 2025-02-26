@@ -1,5 +1,4 @@
-
-.my_data
 DAT $100
+.my_data
 BRK
   nOp

@@ -64,22 +64,22 @@ void byte_list_free(byte_list *b) {
 
 int get_index_next_non_space(char* line, size_t start_index, size_t line_length) {
 	size_t ind = start_index;
+	if (ind >= line_length) return -1;
 	
-	do {
-		if (start_index >= line_length) return -1;
-
+	while (line[ind] == ' ' || line[ind] == '\t');
+	{
+		if (ind >= line_length) return -1;
 		ind++;
-
-	} while (line[ind] == ' ' || line[ind] == '\t');
+	} 
 	
-	return ind-1;
+	return ind;
 
 }
 
 void make_lowercase(char* str, size_t length) {
 	for (int i = 0; i < length; i++) {
 		if (str[i] >= 0x41 && str[i] <= 0x5a) {
-			str[i] -= 0x20;
+			str[i] += 0x20;
 		}
 	}
 }
@@ -88,7 +88,7 @@ void str_copy_until_nonchar(char* out_destination, char* source, size_t max_leng
 	size_t index = 0;
 
 	bool valid_char = true;
-	while (valid_char) {
+	while (valid_char && index < max_length-1) {
 		valid_char = false;
 
 		if (source[index] >= 0x30 && source[index] <= 0x39) {
@@ -106,10 +106,13 @@ void str_copy_until_nonchar(char* out_destination, char* source, size_t max_leng
 			valid_char = true;
 		}
 
+		if (source[index] == '_') valid_char = true;
+
 		if(valid_char) out_destination[index] = source[index];
 
 		index++;
 	}
+	out_destination[index] = '\0';
 }
 
 uint16_t first_pass_index = 0;
@@ -125,7 +128,7 @@ void process_line_first_pass(char* line, hashmap* named_addresses, byte_list* by
 		char name[50];
 
 		// Omit the '.'
-		strncpy(name, line + ind + 1, sizeof(name));
+		str_copy_until_nonchar(name, line + ind + 1, sizeof(name));
 		hashmap_insert_kvp(named_addresses, name, first_pass_index);
 	}
 	else if (line[ind] == ';') {

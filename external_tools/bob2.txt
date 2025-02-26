@@ -1,0 +1,4 @@
+and ($00 x)
+ora (0 x)
+xor (0 x)
+lda (0 x)
