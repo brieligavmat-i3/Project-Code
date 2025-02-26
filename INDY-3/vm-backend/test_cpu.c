@@ -3,13 +3,14 @@
 */
 
 #include <stdio.h>
+#include <string.h>
 
 #include "leakcheck_util.h"
 
 #include "kvm_cpu.h"
 #include "kvm_memory.h"
 
-#define KVM_CPU_TESTING
+#define KVM_CPU_TESTING 1
 
 void quit(void);
 
@@ -26,7 +27,7 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 
-	print_allocation_data();
+	//print_allocation_data();
 
 	//kvm_cpu_decode_instr(cpu, 0x00); // Should be NOP
 	//kvm_cpu_decode_instr(cpu, 0xE9); // JMP absolute?
@@ -60,19 +61,93 @@ int main(int argc, char* argv[]) {
 	// Test relative branches and absolute jumps
 	//uint8_t instruction_bytes[] = { 0xe9, 0x0a, 0x02, 0xc4, 0x10, 0x0a, 0x0c, 0xd8, 0x05, 0x00, 0xd0, 0xff, 0x0a, 0xdd, 0xf4 };
 
-	uint8_t instruction_bytes[] = { 0xe9, 0x0a, 0x02, 0xc4, 0x10, 0x0a, 0x0c, 0xd8, 0x05, 0x00, 0xd0, 0xff, 0x0a, 0xdd, 0xf4 };
+	//uint8_t instruction_bytes[] = { 0xe9, 0x0a, 0x02, 0xc4, 0x10, 0x0a, 0x0c, 0xd8, 0x05, 0x00, 0xd0, 0xff, 0x0a, 0xdd, 0xf4 };
 
 
-	printf("\ninstructions size: %d\n", (int)sizeof(instruction_bytes));
+	/*printf("\ninstructions size: %d\n", (int)sizeof(instruction_bytes));
 	for (int i = 0; i < sizeof(instruction_bytes); i++) {
 		mem->data[i + PROGRAM_COUNTER_ENTRY_POINT] = instruction_bytes[i];
+	}*/
+
+	printf("Files:\n");
+	system("dir tests /B");
+
+	printf("Enter filename to assemble and run (omit '.txt'): ");
+	char fname[50];
+
+	scanf("%s", fname);
+	printf("\nFilename: %s\n", fname);
+
+	char sys_string[100] = "python assembler.py ";
+	strcat(sys_string, fname);
+	strcat(sys_string, ".txt");
+	if (strnlen(sys_string, 100) == 100) {
+		printf("Error with strings.\n");
+		return -1;
 	}
+
+	//printf("sys string: %s\n", sys_string);
+
+	// Run the python script.
+	if(system(sys_string)) return -1;
+	//printf("execution result: %d\n", result);
+
+	char out_file_name[100] = "outs/";
+	strcat(out_file_name, fname);
+	strcat(out_file_name, ".kvmbin");
+
+	printf("binary file name: %s\n", out_file_name);
+
+	FILE* code_file = fopen(out_file_name, "rb"); // open the file to read bytes
+	if (!code_file) {
+		printf("Error opening assembled file.\n");
+		return -1;
+	}
+
+	// Get the file size (i.e. number of bytes to copy over to the array)
+	fseek(code_file, 0L, SEEK_END);
+	size_t file_size = ftell(code_file);
+	printf("Code file size: %d bytes.\n", file_size);
+	rewind(code_file);
+
+	// Copy the data into memory
+	// TODO: add bounds checking
+	fread(mem->data + PROGRAM_COUNTER_ENTRY_POINT, 1, file_size, code_file);
+	fclose(code_file);
+
 	
+	/*
 	for (int i = 0; i < 10; i++) {
 		kvm_cpu_cycle(cpu, mem);
 		printf("\n\n");
 		kvm_cpu_print_status(cpu);
 		printf("\n0: %x\n1: %x\n", mem->data[0], mem->data[1]);
+	}
+	*/
+
+	// Cpu cycle until system calls happen.
+	size_t cycle_count = 0;
+
+	bool cpu_running = true;
+	while (cpu_running) {
+		kvm_cpu_cycle(cpu, mem);
+
+		if (mem->data[0] > 0) {
+			switch (mem->data[0]) {
+			case 1: // Quit
+				cpu_running = false; break;
+			case 2: // print cpu data
+				printf("\n");
+				kvm_cpu_print_status(cpu);
+				mem->data[0] = 0;
+				break;
+			}
+		}
+
+		if (++cycle_count > 10000) {
+			cpu_running = false;
+			printf("Error, ten thousand cycles reached.\n");
+		}
 	}
 
 	kvm_memory_print_hexdump(mem, 0, 1024); 

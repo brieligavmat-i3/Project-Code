@@ -1172,9 +1172,7 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 
 	cpu->program_counter = pc;
 
-	#ifdef KVM_CPU_TESTING
 	kvm_cpu test_cpu = *cpu;
-	#endif
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*

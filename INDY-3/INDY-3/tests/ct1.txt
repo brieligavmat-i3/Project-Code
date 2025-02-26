@@ -1,0 +1,14 @@
+JMP start_instructions
+
+.data_storage
+dat "Hello, world!"
+
+.start_instructions ; copy 'Hello, World!' to zero page, then quit.
+
+; Trigger 'print cpu info' syscall
+LDA #2
+STA 0
+
+; Trigger 'quit' syscall
+LDA #1
+STA $0

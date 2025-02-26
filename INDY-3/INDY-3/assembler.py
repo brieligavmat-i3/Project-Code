@@ -60,6 +60,8 @@ named_addresses = {}
 
 locations_to_replace = {}
 
+PROGRAM_COUNTER_ENTRY_POINT = 0x200
+
 implicits_str = 'nop brk rts rti tax tay txa tya tsx txs pha pla php plp sec clc clv'
 implicits = {}
 implicits_str = implicits_str.split(' ')
@@ -126,7 +128,7 @@ def process_line(line:str):
 
     # Add a named address
     if stripped_line[0] == '.':
-        named_addresses[stripped_line[1:]] = len(working_bytes)
+        named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
         return
     
     split_line = stripped_line.split(' ')
@@ -444,6 +446,7 @@ def assemble_file(filename:str):
             process_line(line)
 
         for key in locations_to_replace:
+            #print(locations_to_replace[key], named_addresses)
             addr = named_addresses[locations_to_replace[key]]
             working_bytes[key+1] = addr & 0xff
             addr >>= 8
@@ -460,12 +463,10 @@ if argc <= 1:
 else:
     filename = argv[1]
 
-suffix = 'txt'
-
-assemble_file("tests/" + filename + "." + suffix)
+assemble_file("tests/"+filename)
 print(named_addresses)
 print(locations_to_replace)
 
 immut_bytes = bytes(working_bytes)
-with open(f"{filename}_bin.kvmbin", mode='wb') as file:
+with open(f"outs/{filename.split('.')[0]}.kvmbin", mode='wb') as file:
     file.write(immut_bytes)
