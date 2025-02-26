@@ -1,0 +1,6 @@
+.data
+dat $50
+.named_addr
+LDA named_addr x
+STA (named_addr) y
+BCC named_addr

@@ -58,6 +58,8 @@ working_bytes = bytearray()
 
 named_addresses = {}
 
+locations_to_replace = {}
+
 implicits_str = 'nop brk rts rti tax tay txa tya tsx txs pha pla php plp sec clc clv'
 implicits = {}
 implicits_str = implicits_str.split(' ')
@@ -98,7 +100,19 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
            
             #print(value, num, bytes)
 
+def check_int16_or_str(value):
+    num = 0
+    is_addr = False
+    try:
+        num = get_int(value)
+    except:
+        num = 0
+        is_addr = True
+        locations_to_replace[len(working_bytes)] = value
+    return num, is_addr
+
 def process_line(line:str):
+    # Delete any commented out section
     stripped_line = line.strip(' \t\n')
     semicolon_pos = line.find(';')
     
@@ -174,10 +188,11 @@ def process_line(line:str):
         instr_size = 2
         addr_mode = Instr_addr_mode.INVALID
 
+        is_named_addr = False
+
         # gather information about addressing mode
         rh_no_paren = right_hand.strip('()')
         if rh_no_paren != right_hand:
-            print("parentheses")
             rh_no_paren = rh_no_paren.replace(')', '')
             # indirect addressing modes
 
@@ -190,7 +205,10 @@ def process_line(line:str):
                 add_numeric_value(split_rh[0], True)
                 return
             else:
-                current_number = get_int(split_rh[0])
+                check = check_int16_or_str(split_rh[0])
+                current_number = check[0]
+                is_named_addr = check[1]
+
                 instr_size = 3
                 match split_rh[1].lower():
                     case 'x':
@@ -203,7 +221,6 @@ def process_line(line:str):
                         # error
                         print("Error with indirect instruction, no register of that name.")
                         exit(-1)
-            print(addr_mode)
         else:
             value = split_line[1]
             if value[0] == '#':
@@ -218,9 +235,11 @@ def process_line(line:str):
                     exit(-1) 
                 
             else:
-                current_number = get_int(value)
+                check = check_int16_or_str(value)
+                current_number = check[0]
+                is_named_addr = check[1]
 
-                if 0 <= current_number <= 255:
+                if 0 <= current_number <= 255 and not is_named_addr:
                     # zero page addressing
                     if len(split_line) == 2:
                         addr_mode = Instr_addr_mode.ZEROPAGE
@@ -232,7 +251,7 @@ def process_line(line:str):
                         # error
                         print("Error, that register does not exist.")
                         exit(-1)
-                elif 256 <= current_number <= 0xFFFF:
+                elif 256 <= current_number <= 0xFFFF or is_named_addr:
                     instr_size = 3
 
                     # absolute addressing
@@ -415,15 +434,8 @@ def process_line(line:str):
                 
         # apply everything
         working_bytes.append(current_opcode)
-        add_numeric_value(current_number, instr_size==3, instr_size==2)
+        add_numeric_value(current_number, instr_size==3 or is_named_addr, instr_size==2 and not is_named_addr)
 
-
-
-
-            
-    
-    
-    
 
 
 def assemble_file(filename:str):
@@ -431,11 +443,18 @@ def assemble_file(filename:str):
         for line in file:
             process_line(line)
 
-filename = 'bob'
+        for key in locations_to_replace:
+            addr = named_addresses[locations_to_replace[key]]
+            working_bytes[key+1] = addr & 0xff
+            addr >>= 8
+            working_bytes[key+2] = addr & 0xff
+
+filename = 'bob3'
 suffix = 'txt'
 
 assemble_file(filename + "." + suffix)
 print(named_addresses)
+print(locations_to_replace)
 # print(bytes)
 
 immut_bytes = bytes(working_bytes)
