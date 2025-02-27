@@ -439,7 +439,7 @@ def process_line(line:str):
         working_bytes.append(current_opcode)
         add_numeric_value(current_number, instr_size==3 or is_named_addr, instr_size==2 and not is_named_addr)
 
-        print(stripped_line, addr_mode)
+        #print(stripped_line, addr_mode)
 
 
 
@@ -467,8 +467,8 @@ else:
     filename = argv[1]
 
 assemble_file("tests/"+filename)
-print(named_addresses)
-print(locations_to_replace)
+#print(named_addresses)
+#print(locations_to_replace)
 
 immut_bytes = bytes(working_bytes)
 with open(f"outs/{filename.split('.')[0]}.kvmbin", mode='wb') as file:

@@ -136,6 +136,7 @@ int main(int argc, char* argv[]) {
 			switch (mem->data[0]) {
 			case 1: // Quit
 				cpu_running = false; break;
+			case 0xFF:
 			case 2: // print cpu data
 				printf("\n");
 				kvm_cpu_print_status(cpu);

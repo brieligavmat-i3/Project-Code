@@ -768,7 +768,7 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 	case kvmc_bit_test:
 	{
 		uint8_t test_value = cpu->accumulator & value_at_address;
-		cpu_set_status_flag(cpu, CPU_ZERO_FLAG, test_value);
+		cpu_set_status_flag(cpu, CPU_ZERO_FLAG, (test_value == 0));
 		cpu_set_status_flag(cpu, CPU_NEGATIVE_FLAG, (value_at_address & 0x80));
 		cpu_set_status_flag(cpu, CPU_OVERFLOW_FLAG, (value_at_address & 0x40)); // set bit 6.
 	}

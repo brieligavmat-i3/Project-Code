@@ -1,0 +1,3 @@
+; test shifts and rotates
+
+INC 0 ; quit
