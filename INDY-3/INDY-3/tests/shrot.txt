@@ -1,3 +1,78 @@
 ; test shifts and rotates
 
+jsr loop_from_8_shl
+jsr loop_from_8_shr
+jsr loop_from_8_rol
+jsr loop_from_8_ror
+
+LDA #$F0
+STA $300
+ROL $300
+
 INC 0 ; quit
+
+.loop_from_8_shl
+LDA #1
+LDX #0
+
+LDY #8              ; loop down from 8
+STY $3
+
+.shl_inner
+STA $10 x
+SHL
+
+INX
+DEC $3
+BNE shl_inner
+RTS
+
+.loop_from_8_shr
+LDA #$FF
+LDX #$10
+
+LDY #8              ; loop down from 8
+STY $3
+
+.shr_inner
+STA $10 x
+SHR
+
+INX
+DEC $3
+BNE shr_inner
+RTS
+
+.loop_from_8_rol
+clc
+LDA #$1
+LDX #$20
+
+LDY #16              ; loop down from 16
+STY $3
+
+.rol_inner
+STA $10 x
+ROL
+
+INX
+DEC $3
+BNE rol_inner
+RTS
+
+.loop_from_8_ror
+sec
+LDA #$1
+LDX #$30
+
+LDY #16              ; loop down from 16
+STY $3
+
+.ror_inner
+STA $10 x
+ROR
+
+INX
+DEC $3
+BNE ror_inner
+RTS
