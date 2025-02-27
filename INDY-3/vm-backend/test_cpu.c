@@ -79,8 +79,13 @@ int main(int argc, char* argv[]) {
 	printf("\nFilename: %s\n", fname);
 
 	char sys_string[100] = "python assembler.py ";
+
+	char prog_count_str[20];
+	sprintf(prog_count_str, "%d", PROGRAM_COUNTER_ENTRY_POINT);
+
 	strcat(sys_string, fname);
-	strcat(sys_string, ".txt");
+	strcat(sys_string, ".txt ");
+	strcat(sys_string, prog_count_str);
 	if (strnlen(sys_string, 100) == 100) {
 		printf("Error with strings.\n");
 		return -1;

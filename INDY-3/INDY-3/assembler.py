@@ -1,6 +1,13 @@
 # Tool to assemble a text file of assembly instructions into actual bytes to be read by the VM
 # Author: Matthew Watson
 
+'''
+TODO: Allow user to name specific addresses, and have the program know if they are zero page addresses, so it can assemble properly.
+Something like:
+.zpvar $56 ; zpvar would be a zero page address
+.graphicspg1 $2300 ; graphicspg1 would be an absolute address
+'''
+
 from enum import Enum
 
 class Instr_class(Enum):
@@ -53,7 +60,11 @@ class Instr_reg_operand(Enum):
 # global vars
 working_bytes = bytearray()
 
+# subroutines and data portions
 named_addresses = {}
+
+# specified addresses
+named_firstpass_addresses = {}
 
 locations_to_replace = {}
 
@@ -104,16 +115,28 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
            
             #print(value, num, bytes)
 
-def check_int16_or_str(value):
+def check_int16_or_str(value, type:str):
     num = 0
     is_addr = False
     try:
-        num = get_int(value)
+        num = get_addr(value)
     except:
         num = 0
         is_addr = True
-        locations_to_replace[len(working_bytes)] = value
+        locations_to_replace[len(working_bytes)] = (value, type)
     return num, is_addr
+
+# This one only works if the address has been defined already. Done during first pass.
+def get_addr(value):
+    try:
+        num = get_int(value)
+    except:
+        num = named_firstpass_addresses[value]
+    
+    if num < 0:
+        num = abs(num)
+    
+    return num
 
 def process_line(line:str):
     # Delete any commented out section
@@ -128,7 +151,11 @@ def process_line(line:str):
 
     # Add a named address
     if stripped_line[0] == '.':
-        named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
+        split_line = stripped_line.split(' ')
+        if len(split_line) == 1:
+            named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
+        else:
+            named_firstpass_addresses[split_line[0][1:].strip(' \t\n')] = get_int(split_line[1])
         return
     
     split_line = stripped_line.split(' ')
@@ -203,11 +230,11 @@ def process_line(line:str):
                 # standard indirect addressing
                 # only one instruction does this
                 working_bytes.append(0x89)
-                print(split_rh)
-                add_numeric_value(split_rh[0], True)
+                #print(split_rh)
+                add_numeric_value(get_addr(split_rh[0]), True)
                 return
             else:
-                check = check_int16_or_str(split_rh[0])
+                check = check_int16_or_str(split_rh[0], 'all')
                 current_number = check[0]
                 is_named_addr = check[1]
 
@@ -227,17 +254,26 @@ def process_line(line:str):
             value = split_line[1]
             if value[0] == '#':
                 # immediate addressing
-                num = get_int(value[1:])
-                if 0 <= num <= 255:
-                    current_number = num
-                    addr_mode = Instr_addr_mode.IMMEDIATE
+                addr_mode = Instr_addr_mode.IMMEDIATE
+                if value.lower()[1:3] == 'hi':
+                    named_addr = split_line[2]
+                    num = check_int16_or_str(named_addr, 'hi')
+                elif value.lower()[1:3] == 'lo':
+                    named_addr = split_line[2]
+                    num = check_int16_or_str(named_addr, 'lo')
                 else:
-                    # error
-                    print("Error, immediate value too large (must be between 0 and 255 or 0x0 and 0xFF)")
-                    exit(-1) 
+                    # normal 8-bit number
+                    num = get_int(value[1:])
+                    if 0 <= num <= 255:
+                        current_number = num
+                        
+                    else:
+                        # error
+                        print("Error, immediate value too large (must be between 0 and 255 or 0x0 and 0xFF)")
+                        exit(-1) 
                 
             else:
-                check = check_int16_or_str(value)
+                check = check_int16_or_str(value, 'all')
                 current_number = check[0]
                 is_named_addr = check[1]
 
@@ -439,7 +475,7 @@ def process_line(line:str):
         working_bytes.append(current_opcode)
         add_numeric_value(current_number, instr_size==3 or is_named_addr, instr_size==2 and not is_named_addr)
 
-        #print(stripped_line, addr_mode)
+    #print(stripped_line, addr_mode)
 
 
 
@@ -449,11 +485,21 @@ def assemble_file(filename:str):
             process_line(line)
 
         for key in locations_to_replace:
-            #print(locations_to_replace[key], named_addresses)
-            addr = named_addresses[locations_to_replace[key]]
-            working_bytes[key+1] = addr & 0xff
-            addr >>= 8
-            working_bytes[key+2] = addr & 0xff
+            v = locations_to_replace[key]
+            addr = named_addresses[v[0]]
+            match v[1]:
+                case 'all':
+                    #print(locations_to_replace[key], named_addresses)
+                    
+                    working_bytes[key+1] = addr & 0xff
+                    addr >>= 8
+                    working_bytes[key+2] = addr & 0xff
+                case 'hi':
+                    addr >>= 8
+                    working_bytes[key+1] = addr & 0xff
+                case 'lo':
+                    working_bytes[key+1] = addr & 0xff
+                
 
 import sys
 
@@ -465,6 +511,7 @@ if argc <= 1:
     filename = input("Please enter filename: ")
 else:
     filename = argv[1]
+    PROGRAM_COUNTER_ENTRY_POINT = int(argv[2])
 
 assemble_file("tests/"+filename)
 #print(named_addresses)
