@@ -218,7 +218,6 @@ def process_line(line:str):
         addr_mode = Instr_addr_mode.INVALID
 
         is_named_addr = False
-
         # gather information about addressing mode
         rh_no_paren = right_hand.strip('()')
         if rh_no_paren != right_hand:
@@ -310,6 +309,8 @@ def process_line(line:str):
                     print("Error, number too large")
                     exit(-1)
 
+
+        
         # Apply the high bits which signify the addressing mode
         match addr_mode:
             case Instr_addr_mode.ZEROPAGE | Instr_addr_mode.ZPX | Instr_addr_mode.ZPY:
@@ -328,7 +329,7 @@ def process_line(line:str):
         # Handle odd instructions out
         is_normal = True
 
-        if Instr_addr_mode == Instr_addr_mode.INDIRECT_INDEX_Y:
+        if addr_mode == Instr_addr_mode.INDIRECT_INDEX_Y:
             is_normal = False
             match instr:
                 case 'and':
@@ -351,7 +352,6 @@ def process_line(line:str):
                     # error
                     print("No indirect index y instruction", instr)
                     exit(-1)
-        
         # Absolute jumps and misplaced lda/sta
         match instr:
             case 'jmp':
@@ -398,7 +398,7 @@ def process_line(line:str):
                     is_normal = False
                     current_opcode = 0xBE
         
-        elif addr_mode in [Instr_addr_mode.INDEX_INDIRECT_X, Instr_addr_mode.ZPX, Instr_addr_mode.ZPY]:
+        elif addr_mode in [Instr_addr_mode.INDEX_INDIRECT_X, Instr_addr_mode.INDIRECT_INDEX_Y, Instr_addr_mode.ZPX, Instr_addr_mode.ZPY]:
             current_opcode |= 0b10_0000
 
         if is_normal:
