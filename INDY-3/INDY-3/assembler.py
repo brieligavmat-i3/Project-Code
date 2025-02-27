@@ -1,10 +1,7 @@
+# Tool to assemble a text file of assembly instructions into actual bytes to be read by the VM
+# Author: Matthew Watson
+
 from enum import Enum
-
-'''
-What needs to be done?
-
-line split, then uhh.. hmm.
-'''
 
 class Instr_class(Enum):
     AND = 0
@@ -68,12 +65,19 @@ implicits_str = implicits_str.split(' ')
 for i, item in enumerate(implicits_str):
     implicits[item] = i
 
+def twos_complement_byte(value:int):
+    print(f"twos comp. of {value}")
+    return (~value + 1) & 0xff
+
 def get_int(value:str):
     base = 10
     if value[0] == '$':
         value = value[1:]
         base = 16
-    return int(value, base)
+    result = int(value, base)
+    if result < 0:
+       result = twos_complement_byte(abs(result))
+    return result
 
 def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     if type(value) is str:
@@ -83,8 +87,6 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     else:
         print("Error with add_numeric, type is not int or string")
         exit(-1)
-
-    # TODO: allow negative numbers, assemble them as twos complement
 
     if verify_16_bit:
         # must be two bytes worth of data. Will just take the lowest two bytes if it's more.
@@ -116,15 +118,13 @@ def check_int16_or_str(value):
 def process_line(line:str):
     # Delete any commented out section
     stripped_line = line.strip(' \t\n')
-    semicolon_pos = line.find(';')
+    semicolon_pos = stripped_line.find(';')
     
     if semicolon_pos != -1:
-        stripped_line = stripped_line[:semicolon_pos]
+        stripped_line = stripped_line[:semicolon_pos].strip(' \t\n')
 
     if len(stripped_line) == 0:
         return
-    
-    print(stripped_line)
 
     # Add a named address
     if stripped_line[0] == '.':
@@ -245,29 +245,30 @@ def process_line(line:str):
                     # zero page addressing
                     if len(split_line) == 2:
                         addr_mode = Instr_addr_mode.ZEROPAGE
-                    elif split_line[2].lower() == 'x':
-                        addr_mode = Instr_addr_mode.ZPX
-                    elif split_line[2].lower() == 'y':
-                        addr_mode = Instr_addr_mode.ZPY
                     else:
-                        # error
-                        print("Error, that register does not exist.")
-                        exit(-1)
+                        if split_line[2].lower() == 'x':
+                            addr_mode = Instr_addr_mode.ZPX
+                        elif split_line[2].lower() == 'y':
+                            addr_mode = Instr_addr_mode.ZPY
+                        else:
+                            # error
+                            print("Error, that register does not exist.")
+                            exit(-1)
                 elif 256 <= current_number <= 0xFFFF or is_named_addr:
                     instr_size = 3
 
                     # absolute addressing
                     if len(split_line) == 2:
                         addr_mode = Instr_addr_mode.ABSOLUTE
-                    elif split_line[2].lower() == 'x':
-                        addr_mode = Instr_addr_mode.ABX
-                    elif split_line[2].lower() == 'y':
-                        addr_mode = Instr_addr_mode.ABY
                     else:
-                        # error
-                        print("Error, that register does not exist.")
-                        exit(-1)
-                    pass
+                        if split_line[2].lower() == 'x':
+                            addr_mode = Instr_addr_mode.ABX
+                        elif split_line[2].lower() == 'y':
+                            addr_mode = Instr_addr_mode.ABY
+                        else:
+                            # error
+                            print("Error, that register does not exist. abs")
+                            exit(-1)
                 else:
                     # error
                     print("Error, number too large")
@@ -361,7 +362,7 @@ def process_line(line:str):
                     is_normal = False
                     current_opcode = 0xBE
         
-        if addr_mode == Instr_addr_mode.INDEX_INDIRECT_X:
+        elif addr_mode in [Instr_addr_mode.INDEX_INDIRECT_X, Instr_addr_mode.ZPX, Instr_addr_mode.ZPY]:
             current_opcode |= 0b10_0000
 
         if is_normal:
@@ -437,6 +438,8 @@ def process_line(line:str):
         # apply everything
         working_bytes.append(current_opcode)
         add_numeric_value(current_number, instr_size==3 or is_named_addr, instr_size==2 and not is_named_addr)
+
+        print(stripped_line, addr_mode)
 
 
 

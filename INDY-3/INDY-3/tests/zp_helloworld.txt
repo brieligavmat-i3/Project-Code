@@ -1,0 +1,35 @@
+JMP start_instructions
+
+.data_storage
+dat "Hello, world!"
+
+.start_instructions ; copy 'Hello, World!' to zero page, then quit.
+
+; Trigger 'print cpu info' syscall
+LDA #2
+STA 0
+
+LDX #0
+LDA #13 ; load the number 13 into the accumulator
+STA 3   ; fourth address on zero page
+.loop_top
+    LDA data_storage x
+    STA $10 x
+    STA $20 x
+    STA $30 x
+    STA $40 x
+    STA $50 x
+    STA $60 x ; fill some zero page rows with "Hello, World!"
+
+    INX
+    LDA 3
+
+    LDY #2
+    STY 0   ; print cpu status
+    
+    DEC 3
+BNE loop_top ; branch if not yet zero
+
+; Trigger 'quit' syscall
+LDA #1
+STA $0

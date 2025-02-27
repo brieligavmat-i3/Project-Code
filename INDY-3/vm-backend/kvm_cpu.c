@@ -923,6 +923,7 @@ void kvm_cpu_execute_instr(kvm_cpu* cpu, kvm_memory* mem) {
 		else {
 			current--;
 		}
+		kvm_cpu* test_cpu = cpu;
 		update_zero_and_negative_flags(cpu, current);
 
 		switch (instr->register_operand) {
