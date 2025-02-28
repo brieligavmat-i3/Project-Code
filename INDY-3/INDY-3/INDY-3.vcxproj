@@ -29,15 +29,10 @@
     <ClCompile Include="..\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\assembler.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
     <ClCompile Include="..\vm-backend\linklist.c" />
-    <ClCompile Include="..\vm-backend\str_uint16_hash.c" />
-    <ClCompile Include="..\vm-backend\test_assembler.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
-    </ClCompile>
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
     </ClCompile>
@@ -51,13 +46,11 @@
     <ClInclude Include="..\imgui-master\imstb_rectpack.h" />
     <ClInclude Include="..\imgui-master\imstb_textedit.h" />
     <ClInclude Include="..\imgui-master\imstb_truetype.h" />
-    <ClInclude Include="..\vm-backend\assembler.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
     <ClInclude Include="..\vm-backend\kvm_memory.h" />
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
-    <ClInclude Include="..\vm-backend\str_uint16_hash.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
