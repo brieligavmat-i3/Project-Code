@@ -29,13 +29,16 @@
     <ClCompile Include="..\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
     <ClCompile Include="..\vm-backend\linklist.c" />
     <ClCompile Include="..\vm-backend\test_cpu.c">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="kvm.c" />
+    <ClCompile Include="test_kvm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\backends\imgui_impl_sdl2.h" />
@@ -46,11 +49,13 @@
     <ClInclude Include="..\imgui-master\imstb_rectpack.h" />
     <ClInclude Include="..\imgui-master\imstb_textedit.h" />
     <ClInclude Include="..\imgui-master\imstb_truetype.h" />
+    <ClInclude Include="..\vm-backend\kvm.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
     <ClInclude Include="..\vm-backend\kvm_memory.h" />
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
+    <ClInclude Include="kvm.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -106,7 +111,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Libraries\SDL2\lib\x64;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

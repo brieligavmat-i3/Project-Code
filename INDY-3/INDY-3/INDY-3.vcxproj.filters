@@ -75,14 +75,14 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\assembler.c">
-      <Filter>Source Files\assembler</Filter>
+    <ClCompile Include="kvm.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\test_assembler.c">
-      <Filter>Source Files\assembler</Filter>
+    <ClCompile Include="test_kvm.c">
+      <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\str_uint16_hash.c">
-      <Filter>Source Files\vm-utilities</Filter>
+    <ClCompile Include="..\vm-backend\kvm.c">
+      <Filter>Source Files\vm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,11 +125,11 @@
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
-    <ClInclude Include="..\vm-backend\assembler.h">
+    <ClInclude Include="kvm.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\vm-backend\str_uint16_hash.h">
-      <Filter>Header Files\vm-utilities</Filter>
+    <ClInclude Include="..\vm-backend\kvm.h">
+      <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

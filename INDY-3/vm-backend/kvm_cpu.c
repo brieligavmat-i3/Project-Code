@@ -1175,7 +1175,7 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 
 	cpu->program_counter = pc;
 
-	kvm_cpu test_cpu = *cpu;
+	kvm_cpu test_cpu = *cpu; // for debugging, lets you see the cpu's stuff in the VS debugger.
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*
