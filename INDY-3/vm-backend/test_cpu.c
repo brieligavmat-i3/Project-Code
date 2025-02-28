@@ -10,8 +10,6 @@
 #include "kvm_cpu.h"
 #include "kvm_memory.h"
 
-#define KVM_CPU_TESTING 1
-
 void quit(void);
 
 int main(int argc, char* argv[]) {
