@@ -1,0 +1,60 @@
+DEC 0; trigger print status system call
+     ; this also sets the negative flag but whatever
+
+;LDA #255
+;LDX #-20
+;LDY #-5
+
+;DEC 0 
+
+;TAX
+
+;DEC 0
+
+;TAY
+
+;DEC 0
+
+;LDA #255
+;LDX #-20
+;LDY #-5
+;DEC 0
+
+;TXA
+;DEC 0
+;TYA
+;DEC 0
+
+LDX #0
+LDA #55
+LDY #0
+
+DEC 0
+
+TXS
+
+DEC 0
+
+PLA
+TSX
+
+DEC 0
+
+LDA #$F0
+PHP
+PHA
+
+DEC 0
+
+PLP
+PLA
+
+INY
+
+DEC 0
+
+
+
+
+; Quit
+INC 0

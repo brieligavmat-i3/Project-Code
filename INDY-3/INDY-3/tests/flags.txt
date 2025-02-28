@@ -1,0 +1,44 @@
+CLC
+BCC #1
+DEC 0 ; should skip this
+
+PHP     ; save processor status
+
+BCS #1
+DEC 0 ; should not skip this
+
+LDA #$FF
+ADC #1
+PHP     ; save processor status
+
+BCS #1 
+DEC 0 ; should skip this
+
+CLC
+CLV
+LDA #1
+BNE #1
+DEC 0 ; should skip
+
+LDA #$FF
+BPL #1
+DEC 0 ; should NOT skip
+
+PHP     ; save processor status
+
+BMI #1
+DEC 0 ; should skip
+
+LDA #126
+ADC #5
+
+BVC #1
+DEC 0 ; should skip
+
+BVS #1
+DEC 0 ; should not skip
+
+PHP
+
+.quit
+INC 0   ;quit

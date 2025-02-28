@@ -1,0 +1,13 @@
+.indirection_pt $300
+
+LDA #$10
+STA $300
+
+LDA #$55
+STA $15
+
+LDY #$5
+
+LDA (indirection_pt) y
+
+INC 0 ; quit
