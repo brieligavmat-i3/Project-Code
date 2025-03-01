@@ -37,7 +37,6 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="kvm.c" />
     <ClCompile Include="test_kvm.c" />
   </ItemGroup>
   <ItemGroup>
@@ -55,7 +54,6 @@
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
-    <ClInclude Include="kvm.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

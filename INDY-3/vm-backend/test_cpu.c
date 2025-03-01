@@ -33,7 +33,8 @@ int main(int argc, char* argv[]) {
 	printf("Enter filename to assemble and run (omit '.txt'): ");
 	char fname[50];
 
-	scanf("%s", fname);
+	if(scanf("%s", fname) != 1) return -1;
+	fname[49] = 0;
 	printf("\nFilename: %s\n", fname);
 
 	char sys_string[100] = "python assembler.py ";
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
 	// Get the file size (i.e. number of bytes to copy over to the array)
 	fseek(code_file, 0L, SEEK_END);
 	size_t file_size = ftell(code_file);
-	printf("Code file size: %d bytes.\n", file_size);
+	printf("Code file size: %d bytes.\n", (int)file_size);
 	rewind(code_file);
 
 	// Copy the data into memory

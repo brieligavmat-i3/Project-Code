@@ -75,9 +75,6 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="kvm.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="test_kvm.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
@@ -124,9 +121,6 @@
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
-    </ClInclude>
-    <ClInclude Include="kvm.h">
-      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm.h">
       <Filter>Header Files\vm</Filter>
