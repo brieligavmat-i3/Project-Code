@@ -24,6 +24,11 @@
 #define SYSCALL_LOAD_GRAPHICS 3
 #define SYSCALL_SET_CYCLE_MAX 4
 
+#define SYSCALL_SET_TIMER 10
+#define SYSCALL_START_TIMER 11
+#define SYSCALL_STOP_TIMER 12
+#define SYSCALL_GET_TIMER 13
+
 kvm_memory* mem;
 kvm_cpu* cpu;
 
@@ -185,6 +190,12 @@ int kvm_start(int max_cycles) {
 	// Cpu cycle until system calls happen.
 	size_t cycle_count = 0;
 
+	#pragma region Timer Variables
+	uint64_t sdl_timer_start_time = 0;
+	uint64_t sdl_timer_current_time = 0;
+	uint16_t kvm_timer = 0;
+	#pragma endregion
+
 	bool cpu_running = true;
 	while (cpu_running) {
 		kvm_cpu_cycle(cpu, mem);
@@ -204,7 +215,7 @@ int kvm_start(int max_cycles) {
 				break;
 			case SYSCALL_LOAD_PALETTES:
 			{
-				char *graphics_fname = malloc(50);
+				char* graphics_fname = malloc(50);
 				load_string(graphics_fname, syscall_addr, 50);
 
 				int graphics_result = kvm_load_graphics(NULL, graphics_fname);
@@ -218,7 +229,7 @@ int kvm_start(int max_cycles) {
 
 				free(graphics_fname);
 			}
-				break;
+			break;
 			case SYSCALL_LOAD_GRAPHICS:
 			{
 				char* graphics_fname = malloc(50);
@@ -235,10 +246,28 @@ int kvm_start(int max_cycles) {
 
 				free(graphics_fname);
 			}
-				break;
+			break;
 			case SYSCALL_SET_CYCLE_MAX:
 				// Set the max number of cpu cycles to go, using the uint16 stored in the second two bytes of memory.
 				max_cycles = syscall_addr;
+				break;
+
+				// Timer interaction
+			case SYSCALL_START_TIMER:
+				kvm_timer = 0;
+				sdl_timer_start_time = SDL_GetTicks64();
+				break;
+			case SYSCALL_STOP_TIMER:
+				sdl_timer_current_time = SDL_GetTicks64() - sdl_timer_start_time;
+				break;
+			case SYSCALL_GET_TIMER:
+			{
+				sdl_timer_current_time = SDL_GetTicks64() - sdl_timer_start_time;
+				kvm_timer = (uint16_t)(sdl_timer_current_time % 0xFFFF);
+				mem->data[1] = (uint8_t)(kvm_timer & 0xFF);
+				mem->data[2] = (uint8_t)(kvm_timer >> 8) & 0xFF;
+			}
+				break;
 			}
 
 			mem->data[0] = 0;
