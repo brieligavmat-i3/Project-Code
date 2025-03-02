@@ -78,10 +78,13 @@
     <ClCompile Include="..\vm-backend\kvm.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\kvm_input.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\vm-backend\test_kvm.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_input.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_gpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
   </ItemGroup>
@@ -129,6 +132,12 @@
       <Filter>Header Files\vm</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_input.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_gpu.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>

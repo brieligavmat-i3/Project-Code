@@ -40,7 +40,7 @@ int kvm_gpu_init(kvm_memory* mem) {
 	}
 
 	for (int i = 0; i < 1024; i++) {
-		mem->data[VRAM_TILE_MAP_TABLE + i] = 0xFF;
+		mem->data[VRAM_TILE_MAP_TABLE + i] = 0x00;
 	}
 
 	return 0;
