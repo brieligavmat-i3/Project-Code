@@ -11,6 +11,8 @@
 #include "kvm_memory.h"
 #include "kvm_cpu.h"
 
+#include "kvm_input.h"
+
 // SDL Includes
 #include <SDL.h>
 
@@ -275,6 +277,14 @@ int kvm_start(int max_cycles) {
 				break;
 			case SYSCALL_DELAY:
 				SDL_Delay(syscall_addr);
+				break;
+
+			// Input
+			case SYSCALL_GET_KEY_INPUT:
+				kvm_input_get_keyboard(mem);
+				break;
+			case SYSCALL_GET_MOUSE_INPUT:
+				kvm_input_get_mouse(mem);
 				break;
 			}
 

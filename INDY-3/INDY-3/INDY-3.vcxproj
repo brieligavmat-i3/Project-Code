@@ -31,13 +31,14 @@
     </ClCompile>
     <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
+    <ClCompile Include="..\vm-backend\kvm_input.c" />
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
     <ClCompile Include="..\vm-backend\linklist.c" />
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="test_kvm.c" />
+    <ClCompile Include="..\vm-backend\test_kvm.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\backends\imgui_impl_sdl2.h" />
@@ -50,6 +51,7 @@
     <ClInclude Include="..\imgui-master\imstb_truetype.h" />
     <ClInclude Include="..\vm-backend\kvm.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
+    <ClInclude Include="..\vm-backend\kvm_input.h" />
     <ClInclude Include="..\vm-backend\kvm_memory.h" />
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
