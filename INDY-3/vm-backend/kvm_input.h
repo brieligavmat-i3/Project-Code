@@ -6,9 +6,6 @@
 
 #include "kvm_memory.h"
 
-#define IO_MEM_KEYBOARD_LOC 0x7C00
-#define IO_MEM_MOUSE_LOC 0x7D00
-
 typedef enum kvm_input_keystate {
 	/*
 	* Keyidle: key is not pressed and was also not pressed last update

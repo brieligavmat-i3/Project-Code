@@ -8,7 +8,10 @@
 #include <stdio.h>
 
 #include "kvm_input.h"
+#include "kvm_memory.h"
 #include "leakcheck_util.h"
+
+#include "kvm_mem_map_constants.h"
 
 SDL_KeyCode keys[] = {
 	SDLK_0, SDLK_1, SDLK_2, SDLK_3, SDLK_4, SDLK_5, SDLK_6, SDLK_7, SDLK_8, SDLK_9,

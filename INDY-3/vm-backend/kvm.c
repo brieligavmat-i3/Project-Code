@@ -12,14 +12,14 @@
 #include "kvm_cpu.h"
 
 #include "kvm_input.h"
+#include "kvm_gpu.h"
+
+#include "kvm_mem_map_constants.h"
 
 // SDL Includes
 #include <SDL.h>
 
-// Temporary defines
-#define COLOR_PALETTE_MEM_LOC 0x8003
-#define GRAPHICS_ROM_MEM_LOC 0x9000
-
+// System calls
 #define SYSCALL_QUIT 1
 #define SYSCALL_PRINTCPU 255
 #define SYSCALL_LOAD_PALETTES 2
@@ -36,6 +36,8 @@
 #define SYSCALL_GET_MOUSE_INPUT 51
 #define SYSCALL_GET_CONTROLLER_INPUT 52
 
+#define SYSCALL_GPU_REFRESH 100
+
 kvm_memory* mem;
 kvm_cpu* cpu;
 
@@ -51,6 +53,8 @@ int kvm_init(void) {
 		printf("Error with SDL initialization.\n");
 		return -2;
 	}
+
+	kvm_gpu_init();
 	
 	return 0;
 }
@@ -92,7 +96,7 @@ int kvm_load_instructions(const char* filename) {
 	char sys_string[100] = "python assembler.py ";
 
 	char prog_count_str[20];
-	sprintf(prog_count_str, "%d", PROGRAM_COUNTER_ENTRY_POINT);
+	sprintf(prog_count_str, "%d", INSTRUCTION_ROM_MEM_LOC);
 
 	strcat(sys_string, filename);
 	strcat(sys_string, ".txt ");
@@ -111,7 +115,7 @@ int kvm_load_instructions(const char* filename) {
 
 	printf("binary file name: %s\n", out_file_name);
 
-	int load_result = load_binary_file_to_memory(out_file_name, PROGRAM_COUNTER_ENTRY_POINT);
+	int load_result = load_binary_file_to_memory(out_file_name, INSTRUCTION_ROM_MEM_LOC);
 	if (load_result != 0) return -1;
 
 	return 0;
@@ -163,7 +167,7 @@ int kvm_load_graphics(const char* tile_filename, const char* palette_filename) {
 		strcat(out_palette_filename, palette_filename);
 		strcat(out_palette_filename, ".kvmpal");
 
-		if (load_binary_file_to_memory(out_palette_filename, COLOR_PALETTE_MEM_LOC) != 0) return -1;
+		if (load_binary_file_to_memory(out_palette_filename, VRAM_COLOR_PALETTES) != 0) return -1;
 	}
 	
 
@@ -286,6 +290,8 @@ int kvm_start(int max_cycles) {
 			case SYSCALL_GET_MOUSE_INPUT:
 				kvm_input_get_mouse(mem);
 				break;
+			case SYSCALL_GPU_REFRESH:
+				break;
 			}
 
 			mem->data[0] = 0;
@@ -301,6 +307,9 @@ int kvm_start(int max_cycles) {
 }
 
 int kvm_quit(void) {
+
+	kvm_gpu_quit();
+
 	kvm_cpu_free(cpu);
 	kvm_memory_free(mem);
 

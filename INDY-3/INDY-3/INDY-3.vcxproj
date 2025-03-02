@@ -31,6 +31,7 @@
     </ClCompile>
     <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
+    <ClCompile Include="..\vm-backend\kvm_gpu.c" />
     <ClCompile Include="..\vm-backend\kvm_input.c" />
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
@@ -51,8 +52,10 @@
     <ClInclude Include="..\imgui-master\imstb_truetype.h" />
     <ClInclude Include="..\vm-backend\kvm.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
+    <ClInclude Include="..\vm-backend\kvm_gpu.h" />
     <ClInclude Include="..\vm-backend\kvm_input.h" />
     <ClInclude Include="..\vm-backend\kvm_memory.h" />
+    <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h" />
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />

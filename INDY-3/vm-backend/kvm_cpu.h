@@ -9,8 +9,6 @@
 
 #include "kvm_memory.h"
 
-// In the memory map, 0xE000 is the start point for program ROM information.
-#define PROGRAM_COUNTER_ENTRY_POINT 0xE000
 //#define PROGRAM_COUNTER_ENTRY_POINT 0x0200
 #define STACK_PTR_OFFSET 0x0100
 #define STACK_PTR_DEFAULT 0xFF

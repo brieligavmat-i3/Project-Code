@@ -9,6 +9,7 @@
 #include "leakcheck_util.h"
 
 #include "kvm_cpu.h"
+#include "kvm_mem_map_constants.h"
 
 static uint8_t extract_bits(uint8_t target, uint8_t mask, uint8_t shift) {
 	return (target & mask) >> shift;
@@ -1199,7 +1200,7 @@ kvm_cpu* kvm_cpu_init(void) {
 
 	cpu->stack_ptr = STACK_PTR_DEFAULT;
 
-	cpu->program_counter = PROGRAM_COUNTER_ENTRY_POINT;
+	cpu->program_counter = INSTRUCTION_ROM_MEM_LOC;
 
 	cpu->processor_status = DEFAULT_PROCESSOR_STATUS;
 
