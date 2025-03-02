@@ -1,0 +1,47 @@
+; load the graphics
+
+LDX #low graphics_file
+LDY #high graphics_file
+
+STX 1
+STY 2
+
+LDA #3
+STA 0 ;trigger system call to load the graphics
+
+CLC
+LDA #10 ; check for success
+ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+BCS end_program
+
+; load the palettes
+
+LDX #low palette_file
+LDY #high palette_file
+
+STX 1
+STY 2
+
+LDA #2
+STA 0 ;trigger system call to load the graphics
+
+CLC
+LDA #10 ; check for success
+ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+BCS end_program
+
+.end_program
+DEC 0
+LDA #1
+STA 0
+
+.palette_file
+dat "exp"
+dat 0
+
+.graphics_file
+dat "exg"
+dat 0
+

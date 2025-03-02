@@ -9,7 +9,7 @@
 
 int main(int argc, char* argv[]) {
 
-	if (kvm_init() == -1) return -1;
+	if (kvm_init() != 0) return -1;
 
 	// Get filename from user
 	printf("Files:\n");
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
 		printf("Error with scanf, cannot read in fname.\n");
 		return -1;
 	}
-	printf("\nFilename: %s\n", fname);
+	printf("\nInstruction Filename: %s\n", fname);
 
 	if (kvm_load_instructions(fname) == -1) {
 		printf("Error loading instruction file %s.\n", fname);

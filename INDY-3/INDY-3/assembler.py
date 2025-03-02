@@ -93,7 +93,7 @@ def get_int(value:str):
 def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     if type(value) is str:
         num = get_int(value)
-    elif type(value is int):
+    elif type(value) is int:
         num = value
     else:
         print("Error with add_numeric, type is not int or string")
@@ -108,12 +108,15 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
         # must be one byte worth of data. Will just take the lowest two bytes if it's more.
         working_bytes.append(num & 0xFF)
     else:
-        while num > 0:
-            # If the number is bigger than a byte, add the numbers a byte at a time.
-            working_bytes.append(num & 0xFF)
-            num >>= 8
-           
-            #print(value, num, bytes)
+        if num == 0:
+            working_bytes.append(0)
+        else:
+            while num > 0:
+                # If the number is bigger than a byte, add the numbers a byte at a time.
+                working_bytes.append(num & 0xFF)
+                num >>= 8
+            
+                #print(value, num, bytes)
 
 def check_int16_or_str(value, type:str):
     num = 0
@@ -154,6 +157,7 @@ def process_line(line:str):
         split_line = stripped_line.split(' ')
         if len(split_line) == 1:
             named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
+            #print(named_addresses)
         else:
             named_firstpass_addresses[split_line[0][1:].strip(' \t\n')] = get_int(split_line[1])
         return

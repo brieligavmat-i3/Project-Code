@@ -3,6 +3,7 @@
 */
 #include <stdbool.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "kvm.h"
 #include "leakcheck_util.h"
@@ -13,10 +14,29 @@
 // SDL Includes
 #include <SDL.h>
 
+// Temporary defines
+#define COLOR_PALETTE_MEM_LOC 0x8003
+#define GRAPHICS_ROM_MEM_LOC 0x9000
+
+#define SYSCALL_QUIT 1
+#define SYSCALL_PRINTCPU 255
+#define SYSCALL_LOAD_PALETTES 2
+#define SYSCALL_LOAD_GRAPHICS 3
+#define SYSCALL_SET_CYCLE_MAX 4
+
 kvm_memory* mem;
 kvm_cpu* cpu;
 
 bool is_running = false;
+
+static size_t file_get_size(FILE* file) {
+	// Get the file size (i.e. number of bytes to copy over to the array)
+	fseek(file, 0L, SEEK_END);
+	size_t file_size = ftell(file);
+	rewind(file);
+
+	return file_size;
+}
 
 int kvm_init(void) {
 	mem = kvm_memory_init(0xFFFF, 0);
@@ -29,6 +49,28 @@ int kvm_init(void) {
 		return -2;
 	}
 	
+	return 0;
+}
+
+// Takes a binary file of bytes and puts them in a specififed memory location
+static int load_binary_file_to_memory(const char* filename, size_t offset) {
+	FILE* code_file = fopen(filename, "rb"); // open the file to read bytes
+	if (!code_file) {
+		printf("Error opening binary file.\n");
+		return -1;
+	}
+
+	size_t file_size = file_get_size(code_file);
+
+	// Copy the data into memory
+	if (file_size > mem->size - offset) {
+		printf("Error loading ROM, file size of %d exceeds memory capacity %d.\n", (int)file_size, (int)(mem->size - offset));
+		return -1;
+	}
+
+	fread(mem->data + offset, 1, file_size, code_file);
+	fclose(code_file);
+
 	return 0;
 }
 
@@ -57,29 +99,84 @@ int kvm_load_instructions(const char* filename) {
 
 	printf("binary file name: %s\n", out_file_name);
 
-	FILE* code_file = fopen(out_file_name, "rb"); // open the file to read bytes
-	if (!code_file) {
-		printf("Error opening assembled file.\n");
-		return -1;
-	}
+	int load_result = load_binary_file_to_memory(out_file_name, PROGRAM_COUNTER_ENTRY_POINT);
+	if (load_result != 0) return -1;
 
-	// Get the file size (i.e. number of bytes to copy over to the array)
-	fseek(code_file, 0L, SEEK_END);
-	size_t file_size = ftell(code_file);
-	rewind(code_file);
-
-	// Copy the data into memory
-	if (file_size > mem->size - PROGRAM_COUNTER_ENTRY_POINT) {
-		printf("Error loading ROM, file size of %d exceeds memory capacity %d.\n", (int)file_size, (int)mem->size - PROGRAM_COUNTER_ENTRY_POINT);
-		return -1;
-	}
-
-	fread(mem->data + PROGRAM_COUNTER_ENTRY_POINT, 1, file_size, code_file);
-	fclose(code_file);
+	return 0;
 }
 
+// Runs the python scripts to load in the graphics, then puts the data in their proper ROM spots.
 int kvm_load_graphics(const char* tile_filename, const char* palette_filename) {
+	if (!cpu || !mem) return -1;
 
+	char sys_string[100] = "python graphics_loader.py ";
+
+	char t_fname[50] = "-1";
+	if (tile_filename) {
+		strncpy(t_fname, tile_filename, 50);
+		t_fname[49] = 0;
+	}
+
+	char p_fname[50] = "-1";
+	if (palette_filename) {
+		strncpy(p_fname, palette_filename, 50);
+		p_fname[49] = 0;
+	}
+
+	printf("t: %s\np: %s\n", t_fname, p_fname);
+
+	strcat(sys_string, t_fname);
+	strcat(sys_string, " ");
+	strcat(sys_string, p_fname);
+	if (strnlen(sys_string, 100) == 100) {
+		printf("Error with strings.\n");
+		return -1;
+	}
+
+	// Run the python script.
+	if (system(sys_string)) return -1;
+
+	if (tile_filename) {
+		char out_tile_filename[100] = "graphics/out/";
+		strcat(out_tile_filename, tile_filename);
+		strcat(out_tile_filename, ".kvmpix");
+
+		printf("binary file name: %s\n", out_tile_filename);
+
+		if (load_binary_file_to_memory(out_tile_filename, GRAPHICS_ROM_MEM_LOC) != 0) return -1;
+	}
+	
+	if (palette_filename) {
+		char out_palette_filename[100] = "graphics/out/";
+		strcat(out_palette_filename, palette_filename);
+		strcat(out_palette_filename, ".kvmpal");
+
+		if (load_binary_file_to_memory(out_palette_filename, COLOR_PALETTE_MEM_LOC) != 0) return -1;
+	}
+	
+
+	return 0;
+}
+
+// Gets a character string from KVM memory.
+static void load_string(char* str, uint16_t start_location, uint16_t max_len) {
+	bool null_terminated = false;
+	
+	for (uint16_t i = start_location; i < start_location + max_len; i++) {
+		uint8_t byte = kvm_memory_get_byte(mem, i);
+		str[i-start_location] = byte;
+
+		printf("%d:'%c' ", i, byte);
+
+		if (byte == '\0') {
+			null_terminated = true;
+			break;
+		}
+	}
+
+	if(!null_terminated) str[max_len - 1] = '\0';
+
+	printf("\nLoaded string from memory: %s\n", str);
 }
 
 int kvm_start(int max_cycles) {
@@ -94,16 +191,57 @@ int kvm_start(int max_cycles) {
 
 		// Test for system calls.
 		if (mem->data[0] > 0) {
+
+			// Get the address from the second two bytes of memory, right after the syscall byte.
+			uint16_t syscall_addr = mem->data[1] | ((uint16_t)mem->data[2] << 8);
+
 			switch (mem->data[0]) {
-			case 1: // Quit
+			case SYSCALL_QUIT: // Quit
 				cpu_running = false; break;
-			case 0xFF:
-			case 2: // print cpu data
+			case SYSCALL_PRINTCPU: // print cpu data
 				printf("\n");
 				kvm_cpu_print_status(cpu);
-				mem->data[0] = 0;
 				break;
+			case SYSCALL_LOAD_PALETTES:
+			{
+				char *graphics_fname = malloc(50);
+				load_string(graphics_fname, syscall_addr, 50);
+
+				int graphics_result = kvm_load_graphics(NULL, graphics_fname);
+				if (graphics_result != 0) {
+					printf("Failed to load graphics file %s.\n", graphics_fname);
+					mem->data[1] = 0xFF; // FF for "Freakin' Failure"
+				}
+				else {
+					mem->data[1] = 0x00; // 0 for success.
+				}
+
+				free(graphics_fname);
 			}
+				break;
+			case SYSCALL_LOAD_GRAPHICS:
+			{
+				char* graphics_fname = malloc(50);
+				load_string(graphics_fname, syscall_addr, 50);
+
+				int graphics_result = kvm_load_graphics(graphics_fname, NULL);
+				if (graphics_result != 0) {
+					printf("Failed to load graphics file %s.\n", graphics_fname);
+					mem->data[1] = 0xFF; // FF for "Freakin' Failure"
+				}
+				else {
+					mem->data[1] = 0x00; // 0 for success.
+				}
+
+				free(graphics_fname);
+			}
+				break;
+			case SYSCALL_SET_CYCLE_MAX:
+				// Set the max number of cpu cycles to go, using the uint16 stored in the second two bytes of memory.
+				max_cycles = syscall_addr;
+			}
+
+			mem->data[0] = 0;
 		}
 
 		if (max_cycles > 0 && ++cycle_count > max_cycles) {
@@ -111,6 +249,8 @@ int kvm_start(int max_cycles) {
 			printf("Error, %d cycles reached.\n", max_cycles);
 		}
 	}
+
+	return 0;
 }
 
 int kvm_quit(void) {
@@ -130,4 +270,16 @@ void kvm_hexdump(int start_page, int page_count, bool print_cpu_status) {
 		printf("\n\nCPU Status:\n");
 		kvm_cpu_print_status(cpu);
 	}
+}
+
+uint8_t* kvm_get_memory_pointer(void) {
+	if (!mem) return NULL;
+	if (!mem->data) return NULL;
+
+	return mem->data;
+}
+
+SDL_Surface* kvm_get_display_surface(void) {
+	// will do later
+	return NULL;
 }
