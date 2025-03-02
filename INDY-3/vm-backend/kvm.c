@@ -22,6 +22,8 @@
 // System calls
 #define SYSCALL_QUIT 1
 #define SYSCALL_PRINTCPU 255
+#define SYSCALL_PRINTF 254
+
 #define SYSCALL_LOAD_PALETTES 2
 #define SYSCALL_LOAD_GRAPHICS 3
 #define SYSCALL_SET_CYCLE_MAX 4
@@ -175,24 +177,28 @@ int kvm_load_graphics(const char* tile_filename, const char* palette_filename) {
 }
 
 // Gets a character string from KVM memory.
-static void load_string(char* str, uint16_t start_location, uint16_t max_len) {
+static uint16_t load_string(char* str, uint16_t start_location, uint16_t max_len) {
 	bool null_terminated = false;
-	
+
+	uint16_t end_point = start_location + max_len;
+
 	for (uint16_t i = start_location; i < start_location + max_len; i++) {
 		uint8_t byte = kvm_memory_get_byte(mem, i);
-		str[i-start_location] = byte;
+		str[i - start_location] = byte;
 
-		printf("%d:'%c' ", i, byte);
+		//printf("%d:'%c' ", i, byte);
 
 		if (byte == '\0') {
 			null_terminated = true;
+			end_point = i+1;
 			break;
 		}
 	}
 
-	if(!null_terminated) str[max_len - 1] = '\0';
+	if (!null_terminated) str[max_len - 1] = '\0';
+	//printf("\nLoaded string from memory: %s\n", str);
 
-	printf("\nLoaded string from memory: %s\n", str);
+	return end_point;
 }
 
 int kvm_start(int max_cycles) {
@@ -224,6 +230,22 @@ int kvm_start(int max_cycles) {
 				printf("\n");
 				kvm_cpu_print_status(cpu);
 				break;
+			case SYSCALL_PRINTF:
+			{
+				char* print_string = malloc(256);
+				uint16_t str_end_pt = load_string(print_string, syscall_addr, 256);
+				uint8_t bytes_to_print = kvm_memory_get_byte(mem, str_end_pt);
+				printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
+				printf("%s ", print_string);
+
+				for (int i = 0; i < bytes_to_print; i++) {
+					printf("%x ", kvm_memory_get_byte(mem, str_end_pt + i + 1));
+				}
+				printf("\n");
+
+				free(print_string);
+				break;
+			}
 			case SYSCALL_LOAD_PALETTES:
 			{
 				char* graphics_fname = malloc(50);

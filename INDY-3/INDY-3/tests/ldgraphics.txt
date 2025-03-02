@@ -43,7 +43,7 @@ STA 0 ; here goes nothing. (graphics refresh system call)
 LDA #50 ; get key input
 STA 0
 
-LDX #0
+LDX #36
 LDA keyboard_pos x
 CMP #0
 
@@ -59,6 +59,14 @@ STA 0
 JMP pre_input_test
 
 .end_program
+
+LDX #hi test_printf
+LDY #lo test_printf
+STX 2
+STY 1
+LDA #254
+STA 0
+
 DEC 0
 LDA #1
 STA 0
@@ -70,4 +78,8 @@ dat 0
 .graphics_file
 dat "exg"
 dat 0
+
+.test_printf
+dat "This is a string I'd like to print."
+dat 0 $5 $0102030405
 
