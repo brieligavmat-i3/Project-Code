@@ -99,26 +99,24 @@ def load_palettes(filename:str, outfile_name:str):
 
     flatten = get_pixels(surf)
 
-    for item in flatten:
-        print(hex(item), end=" ")
+    # for item in flatten:
+    #     print(hex(item), end=" ")
     
     count = -1
     for i in range(64):
         if i % 4 == 0:
             count += 1
-            print(count)
+            #print(count)
 
         shift = 16
-        print()
+        #print()
         for _ in range(3):
-            print(hex(flatten[i]), hex((flatten[i] & (0xFF << shift)) >> shift))
+            #print(hex(flatten[i]), hex((flatten[i] & (0xFF << shift)) >> shift))
             palettes.append((flatten[i] & (0xFF << shift)) >> shift)
             shift -= 8
             
     
     byte_palettes = bytearray(palettes)
-    print()
-    print(byte_palettes)
 
     with open(f"graphics/out/{outfile_name}.kvmpal", mode="wb") as bin_file:
         bin_file.write(byte_palettes)
