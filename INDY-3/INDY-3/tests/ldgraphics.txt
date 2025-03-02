@@ -32,6 +32,38 @@ ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
 
 BCS end_program
 
+LDA #11
+STA 0 ; start timer
+
+LDA #100
+STA 0 ; here goes nothing. (graphics refresh system call)
+
+LDA #13
+STA 0 ; get timer value
+
+LDA 1
+PHA
+LDA 2
+PHA ; push timer values to stack
+
+LDA #11
+STA 0 ; start timer
+
+LDA #$88
+STA 1
+LDA #$13
+STA 2
+LDA #14
+STA 0 ; wait five seconds
+
+LDA #13
+STA 0 ; get timer value
+
+LDA 1
+PHA
+LDA 2
+PHA ; push timer values to stack
+
 .end_program
 DEC 0
 LDA #1

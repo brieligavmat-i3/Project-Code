@@ -54,7 +54,7 @@ int kvm_init(void) {
 		return -2;
 	}
 
-	kvm_gpu_init();
+	kvm_gpu_init(mem);
 	
 	return 0;
 }
@@ -291,6 +291,7 @@ int kvm_start(int max_cycles) {
 				kvm_input_get_mouse(mem);
 				break;
 			case SYSCALL_GPU_REFRESH:
+				kvm_gpu_refresh_graphics(mem);
 				break;
 			}
 

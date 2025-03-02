@@ -9,8 +9,6 @@
 
 int main(int argc, char* argv[]) {
 
-	if (kvm_init() != 0) return -1;
-
 	// Get filename from user
 	printf("Files:\n");
 	system("dir tests /B");
@@ -23,6 +21,8 @@ int main(int argc, char* argv[]) {
 		return -1;
 	}
 	printf("\nInstruction Filename: %s\n", fname);
+
+	if (kvm_init() != 0) return -1;
 
 	if (kvm_load_instructions(fname) == -1) {
 		printf("Error loading instruction file %s.\n", fname);
