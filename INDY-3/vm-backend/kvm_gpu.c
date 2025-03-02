@@ -10,16 +10,20 @@
 #include "kvm_gpu.h"
 #include "kvm_mem_map_constants.h"
 
+#define OUTER_WINDOW_SIZE 720
+
 SDL_Window* main_window = NULL;
 SDL_Renderer* main_renderer = NULL;
+
+SDL_Surface* target_surface = NULL;
 
 int kvm_gpu_init(kvm_memory* mem) {
 	main_window = SDL_CreateWindow(
 		NULL,
 		SDL_WINDOWPOS_CENTERED,
 		SDL_WINDOWPOS_CENTERED,
-		256,
-		256,
+		OUTER_WINDOW_SIZE,
+		OUTER_WINDOW_SIZE,
 		SDL_WINDOW_BORDERLESS
 	);
 
@@ -39,8 +43,11 @@ int kvm_gpu_init(kvm_memory* mem) {
 		return -1;
 	}
 
+	SDL_Surface* window_surface = SDL_GetWindowSurface(main_window);
+	target_surface = SDL_CreateRGBSurfaceWithFormat(0, 256, 256, window_surface->format->BitsPerPixel, window_surface->format->format);
+
 	for (int i = 0; i < 1024; i++) {
-		mem->data[VRAM_TILE_MAP_TABLE + i] = 0x00;
+		mem->data[VRAM_TILE_MAP_TABLE + i] = 0xFF;
 	}
 
 	return 0;
@@ -88,8 +95,6 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 		uint8_t tile_id = tile_map[tile_i];
 
-		if (tile_id == 0xff) continue;
-
 		uint8_t attributes = tile_attributes[tile_i];
 
 		uint8_t fliph = extract_bits(attributes, 0b10000000, 7); // horizontal flip
@@ -133,7 +138,7 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 			//printf("TRptr: %d, offset: %d, shift: %d, ci: %d\n", tile_rom_ptr, byte_offset, shift, color_index);
 
 			uint32_t color = bg_color;
-			if (!zeroc || color_index != 0) {
+			if ((!zeroc || color_index != 0) && tile_id != 0xff) {
 				int i0 = palette_ptr + (3 * color_index);
 				color = (palettes[i0] << 16) | (palettes[i0 + 1] << 8) | (palettes[i0 + 2]);
 			}
@@ -175,11 +180,30 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 #pragma endregion
 
 int kvm_gpu_refresh_graphics(kvm_memory* mem) {
-	if (render_tiles(SDL_GetWindowSurface(main_window), mem) != 0)
+
+
+	if (render_tiles(target_surface, mem) != 0)
 	{
 		printf("Error refreshing graphics.\n");
 		return -1;
 	}
+
+	//renderTarget = SDL_CreateTextureFromSurface(main_renderer, surf);
+	SDL_Rect inner_resolution = {
+		0,
+		0,
+		256,
+		256
+	};
+
+	SDL_Rect outer_resolution = {
+		0,
+		0,
+		OUTER_WINDOW_SIZE,
+		OUTER_WINDOW_SIZE
+	};
+
+	SDL_BlitScaled(target_surface, &inner_resolution, SDL_GetWindowSurface(main_window), &outer_resolution);
 
 	SDL_UpdateWindowSurface(main_window);
 	return 0;

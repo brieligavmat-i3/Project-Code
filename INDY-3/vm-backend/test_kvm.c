@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
 	}
 
 	// Actually run the KSU Micro VM
-	int kvm_run_result = kvm_start(10000);
+	int kvm_run_result = kvm_start(-1);
 
 	if (kvm_run_result == 0) {
 		printf("\nProcess Finished.\nFirst four pages of memory:\n");

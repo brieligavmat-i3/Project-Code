@@ -1,5 +1,23 @@
 .keyboard_pos $7C00
 
+.bgcolor_pos $8000
+.tile_att_table $8800
+
+; enable zero color on first tile attribute page
+LDA #$10
+LDX #$FF
+.first_page_loop
+STA tile_att_table x
+
+DEX
+BNE first_page_loop
+STA tile_att_table x
+
+; set background color to blue
+LDX #2
+LDA #$FF
+STA bgcolor_pos x
+
 
 ; load the graphics
 
