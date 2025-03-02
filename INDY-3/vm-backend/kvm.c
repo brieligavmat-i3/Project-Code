@@ -28,20 +28,16 @@
 #define SYSCALL_START_TIMER 11
 #define SYSCALL_STOP_TIMER 12
 #define SYSCALL_GET_TIMER 13
+#define SYSCALL_DELAY 14
+
+#define SYSCALL_GET_KEY_INPUT 50
+#define SYSCALL_GET_MOUSE_INPUT 51
+#define SYSCALL_GET_CONTROLLER_INPUT 52
 
 kvm_memory* mem;
 kvm_cpu* cpu;
 
 bool is_running = false;
-
-static size_t file_get_size(FILE* file) {
-	// Get the file size (i.e. number of bytes to copy over to the array)
-	fseek(file, 0L, SEEK_END);
-	size_t file_size = ftell(file);
-	rewind(file);
-
-	return file_size;
-}
 
 int kvm_init(void) {
 	mem = kvm_memory_init(0xFFFF, 0);
@@ -55,6 +51,15 @@ int kvm_init(void) {
 	}
 	
 	return 0;
+}
+
+static size_t file_get_size(FILE* file) {
+	// Get the file size (i.e. number of bytes to copy over to the array)
+	fseek(file, 0L, SEEK_END);
+	size_t file_size = ftell(file);
+	rewind(file);
+
+	return file_size;
 }
 
 // Takes a binary file of bytes and puts them in a specififed memory location
@@ -267,6 +272,9 @@ int kvm_start(int max_cycles) {
 				mem->data[1] = (uint8_t)(kvm_timer & 0xFF);
 				mem->data[2] = (uint8_t)(kvm_timer >> 8) & 0xFF;
 			}
+				break;
+			case SYSCALL_DELAY:
+				SDL_Delay(syscall_addr);
 				break;
 			}
 
