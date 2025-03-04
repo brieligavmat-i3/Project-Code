@@ -32,6 +32,46 @@ void* leakcheck_malloc(size_t size){
     return ptr;
 }
 
+void* leakcheck_realloc(void* ptr, size_t new_size) {
+
+    // Find the current allocation of ptr
+    link_node* current = allocation_record->head->next;
+    int i = 1;
+    while (current != NULL) {
+        // Check to see if the allocation address matches the given address.
+        allocation* current_allocation = (allocation*)(current->data);
+        if (!current_allocation) {
+            // This should never happen.
+            fprintf(stderr, "Error with leakcheck_realloc- allocation struct %d is null.\n", i);
+            exit(-1);
+            return 0;
+        }
+
+        if (ptr == current_allocation->ptr) {
+            current_allocated_bytes -= current_allocation->size;
+            link_list_remove_at(allocation_record, i);
+            break;
+        }
+
+        i++;
+        current = current->next;
+    }
+
+    void* new_ptr = realloc(ptr, new_size);
+    if (!new_ptr) {
+        fprintf(stderr, "Fatal error, realloc() has returned a null pointer. (in leakcheck_realloc)\n");
+        free(ptr);
+        exit(1);
+    }
+
+    current_allocated_bytes += new_size;
+
+    // Append the new allocation to the end of the records list.
+    link_list_add_at(allocation_record, create_data(new_ptr, new_size), -1);
+
+    return new_ptr;
+}
+
 void leakcheck_free(void *ptr){
     
     // head->next because head is the blank one.

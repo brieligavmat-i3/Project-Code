@@ -14,6 +14,7 @@ typedef struct{
 }allocation;
 
 void* leakcheck_malloc(size_t size);
+void* leakcheck_realloc(void* ptr, size_t new_size);
 
 void leakcheck_free(void *ptr);
 

@@ -46,4 +46,4 @@ void link_list_add_at(link_list *list, void *data, int index);
 // Delete a node at the specified index
 void link_list_remove_at(link_list *list, int index);
 
-void print_list_addresses(link_list *list);
+//void print_list_addresses(link_list *list);

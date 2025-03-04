@@ -35,7 +35,7 @@ void kvm_memory_free(kvm_memory *mem) {
 uint8_t kvm_memory_get_byte(kvm_memory* mem, size_t index) {
 	if (!mem) return 0;
 
-	if (index > 0 && index < mem->size) {
+	if (index >= 0 && index < mem->size) {
 		return mem->data[index];
 	}
 	else {
@@ -43,26 +43,33 @@ uint8_t kvm_memory_get_byte(kvm_memory* mem, size_t index) {
 	}
 }
 
-void kvm_memory_print_hexdump(kvm_memory* mem, uint16_t start_point, uint16_t length, int print_width) {
+void kvm_memory_print_hexdump(kvm_memory* mem, uint16_t start_point, uint16_t length) {
+	int print_width = 16;
+	
 	if (start_point >= mem->size || start_point + length >= mem->size) {
 		fprintf(stderr, "Error with memory hexdump. Requested bounds [%d, %d] are out of bounds for memory size %d.\n", start_point, start_point+length, (int)mem->size);
 	}
 
 	int count = -1;
+	int page = -1;
 
-	printf("     |");
-	for (int i = 0; i < print_width; i++) {
-		printf(" %02x", i);
-	}
-	printf("\n______");
-	for (int i = 0; i < print_width; i++) {
-		printf("___");
-	}
 
 	for (uint16_t index = start_point; index < start_point + length; index++) {
 		
 		count++;
 		if (count % print_width == 0) {
+			if (index % 256 == 0) {
+				// Print the page boundary
+				printf("\n\npg%02x |", ++page);
+				for (int i = 0; i < print_width; i++) {
+					printf(" %02x", i);
+				}
+				printf("\n______");
+				for (int i = 0; i < print_width; i++) {
+					printf("___");
+				}
+			}
+
 			count = 0;
 			printf("\n%04x |", index/print_width);
 		}
