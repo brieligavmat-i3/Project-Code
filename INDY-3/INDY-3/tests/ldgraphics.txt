@@ -59,7 +59,7 @@ STX 1
 STY 2
 
 LDA #2
-STA 0 ;trigger system call to load the graphics
+STA 0 ;trigger system call to load the palettes
 
 CLC
 LDA #10 ; check for success
