@@ -72,23 +72,23 @@ STA 0 ; here goes nothing. (graphics refresh system call)
 
 .pre_input_test
 
-LDA #50 ; get key input
-STA 0
+    LDA #50 ; get key input
+    STA 0
 
-LDX #36
-LDA keyboard_pos x
-CMP #0
+    LDX #36
+    LDA keyboard_pos x
+    CMP #0
 
-BNE end_program
+    BNE end_program
 
-LDA #14
-LDX #32 ; delay for 32 milliseconds
-LDY #0
-STX 1
-STY 2
-STA 0
+    LDA #14
+    LDX #32 ; delay for 32 milliseconds
+    LDY #0
+    STX 1
+    STY 2
+    STA 0
 
-JMP pre_input_test
+    JMP pre_input_test
 
 .end_program
 
