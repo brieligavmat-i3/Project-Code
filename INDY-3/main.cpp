@@ -1,4 +1,4 @@
-/*This source code copyrighted by Lazy Foo' Productions 2004-2024
+﻿/*This source code copyrighted by Lazy Foo' Productions 2004-2024
 and may not be redistributed without written permission.*/
 
 // Using SDL, SDL_Renderer, and ImGui
@@ -8,6 +8,8 @@ and may not be redistributed without written permission.*/
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
+#include <vector>
+
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 640;
@@ -60,6 +62,9 @@ int main(int argc, char* args[])
     char input_text[128] = ""; // Buffer for user input
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
+    std::string temp_preset_name = ""; // Holds preset before submission
+    std::vector<std::string> history; // Stores each entry separately
+
 
     while (!quit)
     {
@@ -74,7 +79,7 @@ int main(int argc, char* args[])
         ImGui_ImplSDLRenderer2_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-        
+
         // Using ImGui Library here
         // Toolbars
         if (ImGui::BeginMainMenuBar()) //Starts the menu bar
@@ -82,7 +87,7 @@ int main(int argc, char* args[])
             if (ImGui::BeginMenu("File")) // create drop down menu named file
             {
                 if (ImGui::MenuItem("Open")) { /* Handle open action */ } // adding selectable item inside file
-                if (ImGui::MenuItem("Save")) { /* Handle save action */ }   
+                if (ImGui::MenuItem("Save")) { /* Handle save action */ }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
                 ImGui::EndMenu();
             }
@@ -101,7 +106,7 @@ int main(int argc, char* args[])
             ImGui::EndMainMenuBar();
         }
 
-       
+
         // Main UI Layout
         ImGui::SetNextWindowPos(ImVec2(10, 40)); //Set position of the next window(layout) to coordinate
         ImGui::SetNextWindowSize(ImVec2(SCREEN_WIDTH - 20, SCREEN_HEIGHT - 50)); // size of the next window
@@ -115,7 +120,7 @@ int main(int argc, char* args[])
 
         // Left Box (Small, Fixed Width)
         ImGui::SetColumnWidth(0, 150);
-        ImGui::BeginChild("LeftBox", ImVec2(0, 0), true, // `true` keeps the box border
+        ImGui::BeginChild("LeftBox", ImVec2(0, 0), true, // true keeps the box border
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::Text("Code Panel");
@@ -124,22 +129,46 @@ int main(int argc, char* args[])
         {
             show_add_window = true;
         }
+        
+        if (ImGui::Button("Undo", ImVec2(115, 30))) // Undo button
+        {
+            if (!history.empty())
+            {
+                history.pop_back(); // Remove the last added input
+
+                // Rebuild displayed_text from history
+                displayed_text.clear();
+                for (size_t i = 0; i < history.size(); ++i)
+                {
+                    if (i > 0) displayed_text.append("\n");
+                    displayed_text.append(history[i]);
+                }
+            }
+        }
+
 
         ImGui::EndChild();
         ImGui::NextColumn(); // Move to Right Box
 
         // Right Box (Large, Fully Expanding)
-        ImGui::BeginChild("RightBox", ImVec2(0, 0), true, // `true` keeps the box border
+        ImGui::BeginChild("RightBox", ImVec2(0, 0), true, // true keeps the box border
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::Text("Code Block");
         ImGui::Separator();
 
-        // Display the preset name and entered text on the same line
-        if (!displayed_text.empty())
-        {
-            ImGui::Text("%s %s", preset_name.c_str(), displayed_text.c_str());
-        }
+
+
+        // Display section for generated code
+        
+        // Creates a scrollable box to display the generated code
+        ImGui::BeginChild("CodePreview", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+
+        // Displays the selected preset name and the user-entered text inside the scrollable area
+        ImGui::TextWrapped("%s", displayed_text.c_str());
+
+        ImGui::EndChild();
+
 
         ImGui::EndChild();
         ImGui::Columns(1); // Exit column mode
@@ -153,9 +182,10 @@ int main(int argc, char* args[])
             ImGui::Text("Select Instruction:");
 
             // Capture which button was clicked and set preset_name
-            if (ImGui::Button("Preset 1")) { preset_name = "Preset 1"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 2")) { preset_name = "Preset 2"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 3")) { preset_name = "Preset 3"; show_text_input_window = true; }
+            if (ImGui::Button("Preset 1")) { temp_preset_name = "Preset 1"; show_text_input_window = true; }
+            if (ImGui::Button("Preset 2")) { temp_preset_name = "Preset 2"; show_text_input_window = true; }
+            if (ImGui::Button("Preset 3")) { temp_preset_name = "Preset 3"; show_text_input_window = true; }
+
 
             if (ImGui::Button("Close")) {
                 show_add_window = false;
@@ -178,8 +208,27 @@ int main(int argc, char* args[])
             //Submit button
             if (ImGui::Button("Submit"))
             {
-                displayed_text = input_text; // Store input in a string
-                show_text_input_window = false; // Close input window
+                if (!temp_preset_name.empty()) // Ensure preset is selected
+                {
+                    std::string new_entry = temp_preset_name + " " + input_text;
+
+                    history.push_back(new_entry); // Store entry in history 
+
+                    if (displayed_text.empty())
+                    {
+                        displayed_text = new_entry; // First entry, no newline
+                    }
+                    else
+                    {
+                        displayed_text.append("\n").append(new_entry); // Append with newline only after the first entry
+                    }
+
+                    temp_preset_name.clear();  // Reset preset
+                    input_text[0] = '\0';   // Clear input text
+
+                    show_add_window = false; 
+                }
+                show_text_input_window = false;
             }
 
             ImGui::SameLine();
