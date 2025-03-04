@@ -177,6 +177,22 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 	return 0;
 }
+
+int render_sprites(SDL_Surface* surf, kvm_memory* mem) {
+	if (!surf) {
+		printf("Could not get window surface.");
+		return -1;
+	}
+
+	uint8_t* mem_data = mem->data;
+	uint8_t* sprite_x = mem_data + VRAM_SPRITE_X_TABLE;
+	uint8_t* sprite_y = mem_data + VRAM_SPRITE_Y_TABLE;
+	uint8_t* sprite_tiles = mem_data + VRAM_SPRITE_TILE_TABLE;
+	uint8_t* sprite_attributes = mem_data + VRAM_SPRITE_ATTRIBUTE_TABLE;
+
+	uint8_t* tile_rom = mem_data + GRAPHICS_ROM_MEM_LOC;
+	uint8_t* palettes = mem_data + VRAM_COLOR_PALETTES;
+}
 #pragma endregion
 
 int kvm_gpu_refresh_graphics(kvm_memory* mem) {

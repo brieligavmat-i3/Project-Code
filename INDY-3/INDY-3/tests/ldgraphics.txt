@@ -2,16 +2,30 @@
 
 .bgcolor_pos $8000
 .tile_att_table $8800
+.tile_map_table $8400
+.tile_map_p2 $8500
 
-; enable zero color on first tile attribute page
+; enable zero color on first tile attribute page and fill in some tiles.
 LDA #$10
-LDX #$FF
+LDX #0
+LDY #0
 .first_page_loop
-STA tile_att_table x
+    STA tile_att_table x
+    STY tile_map_table x
 
-DEX
-BNE first_page_loop
-STA tile_att_table x
+    DEX
+    BNE first_page_loop
+
+
+; Put some tiles on the second page.
+LDA #$28
+LDX #0
+LDY #0
+.second_page_loop
+    STA tile_map_p2 x
+
+    DEX
+    BNE second_page_loop
 
 ; set background color to blue
 LDX #2
