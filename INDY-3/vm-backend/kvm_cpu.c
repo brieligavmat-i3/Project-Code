@@ -651,7 +651,6 @@ static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction
 	break;
 	case kvma_yind:
 	{
-		printf("Initial addr: %x ", target_address);
 		uint8_t lbyte, hbyte;
 
 		lbyte = mem->data[target_address];
@@ -659,7 +658,6 @@ static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction
 
 		target_address = (uint16_t)lbyte | ((uint16_t)hbyte << 8);
 		target_address += cpu->y_index;
-		printf("Target addr: %x\n", target_address);
 	}
 	break;
 	default:

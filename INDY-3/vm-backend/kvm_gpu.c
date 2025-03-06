@@ -10,8 +10,6 @@
 #include "kvm_gpu.h"
 #include "kvm_mem_map_constants.h"
 
-#define OUTER_WINDOW_SIZE 720
-
 SDL_Window* main_window = NULL;
 SDL_Renderer* main_renderer = NULL;
 

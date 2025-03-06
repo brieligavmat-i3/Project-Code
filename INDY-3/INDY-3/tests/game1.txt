@@ -148,6 +148,32 @@ JMP program_begin
     LDA #51
     STA 0   ; Get the mouse input
 
+    ;Put two tiles representing the mouse coords at top left of screen
+        ; find the mouse position and load it into general RAM
+            LDX #0
+            LDA mouse_pos x
+            STA mouse_x
+
+            LDX #1
+            LDA mouse_pos X
+            STA mouse_y
+
+        ; divide the positions by 8 (to get a tile coordinate instead of a pixel coordinate)
+            SHR mouse_x
+            SHR mouse_x
+            SHR mouse_x
+
+            SHR mouse_y
+            SHR mouse_y
+            SHR mouse_y
+        
+        LDX #0
+        LDA mouse_x
+        STA tile_map_p1 X
+        INX
+        LDA mouse_y
+        STA tile_map_p1 X
+    
     LDX #2
     LDA mouse_pos X
     CMP #0
@@ -175,26 +201,28 @@ JMP program_begin
             SHR mouse_y
 
         LDA #0          ; reset calculation values
-        STA mouse_page
         STA mouse_tile
+
+        LDA mouse_y
+        STA mouse_page
+        SHR mouse_page ; divide mouse y by 8 and put it in mouse_page
+        SHR mouse_page
+        SHR mouse_page
 
         ; (mouse_y * 32) + mouse_x = tile value
 
         ; Loop multiply mouse_y by 32
         LDY #5
         .handle_mouse_loop_1
-            
             SHL mouse_y
 
-            BCC #2   ; mouse_page is a zero page address
-            INC mouse_page
-
             DEY
-            BNE handle_mouse_loop_1
+            BNE handle_mouse_loop_1 
         
         CLC
         LDA mouse_tile
         ADC mouse_x
+        ADC mouse_y
         STA mouse_tile
         
         ; This stuff puts the proper tile page address on zero page address 20 and 21
@@ -210,7 +238,6 @@ JMP program_begin
             LDA #lo tile_map_p1
             STA $20
 
-
         ; This stuff puts the proper tile attribute page address on zero page address 30 and 31
         ; We'll use this address for indirection
             LDA #hi tile_att_p1
@@ -225,13 +252,12 @@ JMP program_begin
 
         LDY mouse_tile
 
-        LDA #$2A ; 42 in hex (blank face)
+        LDA #$29 ; 41 in hex (blank face)
 
         STA ($20) Y
 
-        LDA #$A ; the palette to set the tile to
+        LDA #$11 ; the palette to set the tile to, plus use zero color tag
         STA ($30) Y
-
 
     .handle_mouse_not_click
 

@@ -3,6 +3,8 @@
 */
 
 #pragma once
+#define OUTER_WINDOW_SIZE 720
+
 
 // In the memory map, 0xE000 is the start point for program ROM information.
 // This value serves as the program counter entry point
