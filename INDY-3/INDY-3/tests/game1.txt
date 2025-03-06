@@ -153,10 +153,12 @@ JMP program_begin
             LDX #0
             LDA mouse_pos x
             STA mouse_x
+            STA sprite_x
 
             LDX #1
             LDA mouse_pos X
             STA mouse_y
+            STA sprite_y
 
         ; divide the positions by 8 (to get a tile coordinate instead of a pixel coordinate)
             SHR mouse_x
@@ -222,7 +224,7 @@ JMP program_begin
         CLC
         LDA mouse_tile
         ADC mouse_x
-        ADC mouse_y
+        ADC mouse_y     ; add to get the proper mouse tile coordinate
         STA mouse_tile
         
         ; This stuff puts the proper tile page address on zero page address 20 and 21
@@ -279,6 +281,11 @@ JSR clear_tiles
     LDA #53
     STA bgcolor_pos X
 
+LDA #$2B ; tile for mouse pointer
+STA sprite_tile
+LDA #$10 ; attributes for mouse pointer
+STA sprite_att
+
 ; Main loop
 .program_main_loop
 
@@ -293,7 +300,7 @@ JSR clear_tiles
     LDA #100
     STA 0   ; graphics refresh system call
 
-    LDX #32 ; delay for 32 milliseconds
+    LDX #16 ; delay for 1/60 second
     LDY #0
     JSR delay_millis
 
