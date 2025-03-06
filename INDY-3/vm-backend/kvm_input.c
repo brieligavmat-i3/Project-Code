@@ -84,7 +84,7 @@ void kvm_input_get_mouse(kvm_memory* mem) {
 
 	int x, y;
 	uint32_t mouseState = SDL_GetMouseState(&x, &y);
-	printf("Mouse state: %x. x: %x y: %x\n", mouseState & 0xFF, x&0xff, y&0xff);
+	//printf("Mouse state: %x. x: %x y: %x\n", mouseState & 0xFF, x&0xff, y&0xff);
 
 	mouse_mem_loc[0] = (uint8_t)x & 0xff;
 	mouse_mem_loc[1] = (uint8_t)y & 0xff;

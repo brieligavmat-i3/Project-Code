@@ -75,7 +75,7 @@ STA 0 ; here goes nothing. (graphics refresh system call)
     LDA #50 ; get key input
     STA 0
 
-    LDX #36
+    LDX #52
     LDA keyboard_pos x
     CMP #0
 

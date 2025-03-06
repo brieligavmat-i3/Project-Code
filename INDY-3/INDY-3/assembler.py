@@ -90,6 +90,19 @@ def get_int(value:str):
        result = twos_complement_byte(abs(result))
     return result
 
+# This one only works if the address has been defined already. Done during first pass.
+def get_addr(value):
+    try:
+        num = get_int(value)
+    except:
+        num = named_firstpass_addresses[value]
+        #print(hex(named_firstpass_addresses[value]))
+    
+    if num < 0:
+        num = abs(num)
+    
+    return num
+
 def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     if type(value) is str:
         num = get_int(value)
@@ -129,17 +142,6 @@ def check_int16_or_str(value, type:str):
         locations_to_replace[len(working_bytes)] = (value, type)
     return num, is_addr
 
-# This one only works if the address has been defined already. Done during first pass.
-def get_addr(value):
-    try:
-        num = get_int(value)
-    except:
-        num = named_firstpass_addresses[value]
-    
-    if num < 0:
-        num = abs(num)
-    
-    return num
 
 def process_line(line:str):
     # Delete any commented out section
@@ -260,10 +262,10 @@ def process_line(line:str):
                 addr_mode = Instr_addr_mode.IMMEDIATE
                 if value.lower()[1:3] == 'hi':
                     named_addr = split_line[2]
-                    num = check_int16_or_str(named_addr, 'hi')
+                    num = check_int16_or_str(named_addr, 'hi')[0] >> 8
                 elif value.lower()[1:3] == 'lo':
                     named_addr = split_line[2]
-                    num = check_int16_or_str(named_addr, 'lo')
+                    num = check_int16_or_str(named_addr, 'lo')[0]
                 else:
                     # normal 8-bit number
                     num = get_int(value[1:])
@@ -274,6 +276,7 @@ def process_line(line:str):
                         # error
                         print("Error, immediate value too large (must be between 0 and 255 or 0x0 and 0xFF)")
                         exit(-1) 
+                current_number = num
                 
             else:
                 check = check_int16_or_str(value, 'all')

@@ -35,6 +35,9 @@ int main(int argc, char* argv[]) {
 	if (kvm_run_result == 0) {
 		printf("\nProcess Finished.\nFirst four pages of memory:\n");
 		kvm_hexdump(0, 4, true);
+
+		//printf("\n\nTile Data: \n");
+		//kvm_hexdump(0x84, 4, false);
 	}
 
 	kvm_quit();

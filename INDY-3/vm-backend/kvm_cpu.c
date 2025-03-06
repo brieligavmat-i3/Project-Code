@@ -619,6 +619,7 @@ static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 }
 
 static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr, uint8_t* out_value, uint16_t* out_address) {
+	
 	uint16_t target_address = (uint16_t)instr->lowbyte;
 	uint8_t value_at_address = 0;
 
@@ -645,18 +646,20 @@ static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction
 		lbyte = mem->data[target_address];
 		hbyte = mem->data[target_address + 1];
 
-		target_address = lbyte | ((uint16_t)hbyte << 8);
+		target_address = (uint16_t)lbyte | ((uint16_t)hbyte << 8);
 	}
 	break;
 	case kvma_yind:
 	{
+		printf("Initial addr: %x ", target_address);
 		uint8_t lbyte, hbyte;
 
 		lbyte = mem->data[target_address];
 		hbyte = mem->data[target_address + 1];
 
-		target_address = lbyte | ((uint16_t)hbyte << 8);
+		target_address = (uint16_t)lbyte | ((uint16_t)hbyte << 8);
 		target_address += cpu->y_index;
+		printf("Target addr: %x\n", target_address);
 	}
 	break;
 	default:
