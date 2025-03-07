@@ -10,6 +10,8 @@
 #include "kvm_cpu.h"
 #include "kvm_memory.h"
 
+#include "kvm_mem_map_constants.h"
+
 void quit(void);
 
 int main(int argc, char* argv[]) {
@@ -40,7 +42,7 @@ int main(int argc, char* argv[]) {
 	char sys_string[100] = "python assembler.py ";
 
 	char prog_count_str[20];
-	sprintf(prog_count_str, "%d", PROGRAM_COUNTER_ENTRY_POINT);
+	sprintf(prog_count_str, "%d", INSTRUCTION_ROM_MEM_LOC);
 
 	strcat(sys_string, fname);
 	strcat(sys_string, ".txt ");
@@ -76,7 +78,7 @@ int main(int argc, char* argv[]) {
 
 	// Copy the data into memory
 	// TODO: add bounds checking
-	fread(mem->data + PROGRAM_COUNTER_ENTRY_POINT, 1, file_size, code_file);
+	fread(mem->data + INSTRUCTION_ROM_MEM_LOC, 1, file_size, code_file);
 	fclose(code_file);
 
 	

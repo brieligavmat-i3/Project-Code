@@ -7,6 +7,13 @@
 #include "kvm.h"
 #include "kvm_memory.h"
 
+void quit_message(void) {
+	// Wait for the user to type something before quitting.
+	printf("Press [enter] to quit.\n");
+	while (getchar() != '\n');
+	getchar();
+}
+
 int main(int argc, char* argv[]) {
 
 	// Get filename from user
@@ -18,6 +25,7 @@ int main(int argc, char* argv[]) {
 
 	if (scanf("%s", fname) != 1) {
 		printf("Error with scanf, cannot read in fname.\n");
+		quit_message();
 		return -1;
 	}
 	printf("\nInstruction Filename: %s\n", fname);
@@ -26,6 +34,7 @@ int main(int argc, char* argv[]) {
 
 	if (kvm_load_instructions(fname) == -1) {
 		printf("Error loading instruction file %s.\n", fname);
+		quit_message();
 		return -1;
 	}
 
@@ -45,5 +54,7 @@ int main(int argc, char* argv[]) {
 	// Finish up with the memory leak detection stuff.
 	print_allocation_data();
 	clean_allocation();
+
+	quit_message();
 	return 0;
 }

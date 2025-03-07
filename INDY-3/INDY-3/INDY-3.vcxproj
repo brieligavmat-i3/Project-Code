@@ -28,6 +28,7 @@
     <ClCompile Include="..\imgui-master\imgui_widgets.cpp" />
     <ClCompile Include="..\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
@@ -38,6 +39,7 @@
     <ClCompile Include="..\vm-backend\linklist.c" />
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\vm-backend\test_kvm.c" />
   </ItemGroup>
@@ -117,6 +119,10 @@
     <IncludePath>C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Libraries\SDL2\lib\x64;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;C:\Libraries\imgui;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Libraries\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -166,12 +172,14 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <DisableSpecificWarnings>4996;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
+      <AdditionalDependencies>SDL2.lib;SDL2main.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
