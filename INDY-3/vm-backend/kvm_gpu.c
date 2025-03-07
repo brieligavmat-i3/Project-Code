@@ -50,6 +50,9 @@ int kvm_gpu_init(kvm_memory* mem) {
 		mem->data[VRAM_TILE_MAP_TABLE + i] = 0xFF;
 	}
 
+	// Set the lock update flag right at the beginning.
+	mem->data[VRAM_SCREEN_FLAGS] = 0b10;
+
 	return 0;
 }
 
@@ -63,10 +66,21 @@ uint8_t extract_bits(uint8_t b, uint8_t mask, uint8_t shift) {
 	return (b & mask) >> shift;
 }
 
-void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color)
+void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color, uint8_t *pix_offset_map, bool x_scroll_flag, bool locked, int num_locks)
 {
 	int px = x % WINDOW_SIZE; //potential optimization here if it's a problem later.
 	int py = y % WINDOW_SIZE;
+	if (!locked) {
+		if (x_scroll_flag) {
+			py = pix_offset_map[py - (num_locks * 8)];
+			//if (py == 0xff)return;
+		}
+		else {
+			px = pix_offset_map[px - (num_locks * 8)];
+			//if (px == 0xff)return;
+		}
+	}
+	
 
 	Uint32* const target_pixel = (Uint32*)((Uint8*)surface->pixels
 		+ py * surface->pitch
@@ -80,6 +94,56 @@ void tile_lock_update(kvm_memory* mem) {
 	uint8_t* pix_offsets = mem->data + VRAM_PIX_OFFSET_MAP;
 
 	// Update the table
+	/*int offset = 0;
+	for (int i = 0; i < 256; i++) {
+		if (i % 8 == 0) {
+			if (lock_table[i / 8]) {
+				offset += 8;
+			}
+		}
+		if (i + offset >= 256) {
+			pix_offsets[i] = 0xff;
+		}
+		else {
+			pix_offsets[i] = i + offset;
+		}
+	}*/
+
+	int offset = 0;
+	int prev_locked = 0;
+	int start_pos = 0;
+	for (int i = 0; i < 32; i++) {
+		if (lock_table[i]) {
+			if (prev_locked == 0) {
+				start_pos = i * 8;
+			}
+			prev_locked++;
+			offset += 8;
+		}
+		else {
+			for (int j = start_pos; j < start_pos + prev_locked * 8; j++) {
+				pix_offsets[j] = (uint8_t)offset;
+			}
+			
+			for (int j = i * 8; j < i * 8 + 8; j++) {
+				pix_offsets[j] = (uint8_t)offset;
+			}
+
+			prev_locked = 0;
+		}
+	}
+	kvm_memory_print_hexdump(mem, 0x8300, 0x100);
+
+	for (int i = 0; i < 256; i++) {
+		if (pix_offsets[i] + i >= 256) {
+			pix_offsets[i] = 0xff;
+		}
+		else {
+			pix_offsets[i] += i;
+		}
+	}
+
+	kvm_memory_print_hexdump(mem, 0x8300, 0x100);
 
 	uint8_t* screen_flags = mem->data + VRAM_SCREEN_FLAGS;
 	*screen_flags &= 0b11111101; // Clear the lock update flag
@@ -98,9 +162,10 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 	uint8_t* tile_rom = mem_data + GRAPHICS_ROM_MEM_LOC;
 	uint8_t* palettes = mem_data + VRAM_COLOR_PALETTES;
 
-	uint8_t screen_flags = mem_data[VRAM_SCREEN_FLAGS]; // Currently, screen flags will only test bit 1 for x/y scroll mode.
+	uint8_t screen_flags = mem_data[VRAM_SCREEN_FLAGS]; // Currently, screen flags will only test bit 1 for x/y scroll mode and bit 2 for lock update.
 	uint8_t* scroll_table = mem_data + VRAM_TILE_LINE_SHIFT_TABLE;
 	uint8_t* lock_table = mem_data + VRAM_TILE_LINE_LOCK_TABLE;
+	uint8_t* offset_map = mem_data + VRAM_PIX_OFFSET_MAP;
 
 	uint8_t perpendicular_scroll = mem_data[VRAM_PERPENDICULAR_SCROLL];
 
@@ -110,10 +175,13 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 	uint8_t scroll_mode = extract_bits(screen_flags, 0b1, 0); // zero represents x-scroll, 1 is y-scroll
 
-	uint8_t lock_update = extract_bits(screen_flags, 0b10, 1);
+	uint8_t lock_update = extract_bits(screen_flags, 0b10, 0);
 	if (lock_update) {
+		//printf("Lock update\n");
 		tile_lock_update(mem);
 	}
+
+	int num_locks = 0; // for doing line locking stuff. Pixel coords after locked lines will be subtracted by this.
 
 	SDL_LockSurface(surf);
 	for (int tile_i = 0; tile_i < 1024; tile_i++) {
@@ -126,16 +194,31 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 		// Set up scroll values for the tile.
 		uint8_t x_scroll = 0;
 		uint8_t y_scroll = 0;
+
+		bool is_locked = false;
 		if (scroll_mode == 1) {
 			x_scroll = scroll_table[t_ycoord];
 
-			if(lock_table[t_ycoord]) y_scroll = perpendicular_scroll;
+			if (lock_table[t_ycoord]) {
+				is_locked = true;
+				if (t_xcoord == 0) num_locks++;
+			}
+			else {
+				y_scroll = perpendicular_scroll;
+			}
 		}
 		else {
 			y_scroll = scroll_table[t_xcoord];
 			
-			if(lock_table[t_xcoord]) x_scroll = perpendicular_scroll;
+			if (lock_table[t_xcoord]) {
+				is_locked = true;
+				if (t_ycoord == 0) num_locks++;
+			}
+			else { 
+				x_scroll = perpendicular_scroll; 
+			}
 		}
+
 
 		uint8_t tile_id = tile_map[tile_i];
 
@@ -190,10 +273,10 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 			
 			if (mirror) {
 				// Flip the pixel x and y within the tile if it's mirrored.
-				set_pixel(surf, y + t_x + x_scroll, x + t_y + y_scroll, color);
+				set_pixel(surf, y + t_x + x_scroll, x + t_y + y_scroll, color, offset_map, scroll_mode==1, is_locked, num_locks);
 			}
 			else {
-				set_pixel(surf, x + t_x + x_scroll, y + t_y + y_scroll, color);
+				set_pixel(surf, x + t_x + x_scroll, y + t_y + y_scroll, color, offset_map, scroll_mode==1, is_locked, num_locks);
 			}
 
 			// Increment pixel drawing values
@@ -300,11 +383,11 @@ int render_sprites(SDL_Surface* surf, kvm_memory* mem) {
 
 				//printf("x: %d, y:%d, c:%x, ci:%d", x, y, color, color_index);
 				if (mirror) {
-					set_pixel(surf, y + t_x, x + t_y, color);
+					set_pixel(surf, y + t_x, x + t_y, color, NULL, false, true, 0); // we don't care about the last two arguments for sprites.
 					//printf("x: %d, y:%d, c:%x\n", y, x, color);
 				}
 				else {
-					set_pixel(surf, x + t_x, y + t_y, color);
+					set_pixel(surf, x + t_x, y + t_y, color, NULL, false, true, 0);
 				}
 			}
 

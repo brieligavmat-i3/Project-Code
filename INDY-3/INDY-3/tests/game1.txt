@@ -286,6 +286,9 @@ STA sprite_tile
 LDA #$10 ; attributes for mouse pointer
 STA sprite_att
 
+LDA #2
+STA screen_flags
+
 ; Main loop
 .program_main_loop
 
