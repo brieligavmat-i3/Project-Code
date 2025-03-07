@@ -63,13 +63,26 @@ uint8_t extract_bits(uint8_t b, uint8_t mask, uint8_t shift) {
 	return (b & mask) >> shift;
 }
 
-void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color, bool print)
+void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color)
 {
-	//if(print) printf(" %x\n", color);
+	int px = x % WINDOW_SIZE; //potential optimization here if it's a problem later.
+	int py = y % WINDOW_SIZE;
+
 	Uint32* const target_pixel = (Uint32*)((Uint8*)surface->pixels
-		+ y * surface->pitch
-		+ x * surface->format->BytesPerPixel);
+		+ py * surface->pitch
+		+ px * surface->format->BytesPerPixel);
 	*target_pixel = color;
+}
+
+// This is called if bit 2 of screen flags is set when a graphics update is triggered.
+void tile_lock_update(kvm_memory* mem) {
+	uint8_t* lock_table = mem->data + VRAM_TILE_LINE_LOCK_TABLE;
+	uint8_t* pix_offsets = mem->data + VRAM_PIX_OFFSET_MAP;
+
+	// Update the table
+
+	uint8_t* screen_flags = mem->data + VRAM_SCREEN_FLAGS;
+	*screen_flags &= 0b11111101; // Clear the lock update flag
 }
 
 // Tile rendering algorithm. Will always render the entire field of tiles, which is 32x32.
@@ -85,14 +98,44 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 	uint8_t* tile_rom = mem_data + GRAPHICS_ROM_MEM_LOC;
 	uint8_t* palettes = mem_data + VRAM_COLOR_PALETTES;
 
+	uint8_t screen_flags = mem_data[VRAM_SCREEN_FLAGS]; // Currently, screen flags will only test bit 1 for x/y scroll mode.
+	uint8_t* scroll_table = mem_data + VRAM_TILE_LINE_SHIFT_TABLE;
+	uint8_t* lock_table = mem_data + VRAM_TILE_LINE_LOCK_TABLE;
+
+	uint8_t perpendicular_scroll = mem_data[VRAM_PERPENDICULAR_SCROLL];
+
 	// Get the background color
 	uint8_t* bg_color_ptr = mem_data + VRAM_BGCOLOR;
 	uint32_t bg_color = (bg_color_ptr[0] << 16) | (bg_color_ptr[1] << 8) | (bg_color_ptr[2]);
+
+	uint8_t scroll_mode = extract_bits(screen_flags, 0b1, 0); // zero represents x-scroll, 1 is y-scroll
+
+	uint8_t lock_update = extract_bits(screen_flags, 0b10, 1);
+	if (lock_update) {
+		tile_lock_update(mem);
+	}
 
 	SDL_LockSurface(surf);
 	for (int tile_i = 0; tile_i < 1024; tile_i++) {
 		int t_x = (tile_i * 8) % 256;
 		int t_y = (tile_i * 8) / 256 * 8;
+
+		uint8_t t_xcoord = t_x >> 3;
+		uint8_t t_ycoord = t_y >> 3;
+
+		// Set up scroll values for the tile.
+		uint8_t x_scroll = 0;
+		uint8_t y_scroll = 0;
+		if (scroll_mode == 1) {
+			x_scroll = scroll_table[t_ycoord];
+
+			if(lock_table[t_ycoord]) y_scroll = perpendicular_scroll;
+		}
+		else {
+			y_scroll = scroll_table[t_xcoord];
+			
+			if(lock_table[t_xcoord]) x_scroll = perpendicular_scroll;
+		}
 
 		uint8_t tile_id = tile_map[tile_i];
 
@@ -110,6 +153,7 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 		//printf("x: %d, y: %d, i: (%d), id: %x, trp: %d, p: %d, p_ptr: %d, fh: %d, fv: %d, mir: %d, zc: %d, atts: %x\n", t_x, t_y, tile_i, tile_id, tile_rom_ptr, palette, palette_ptr, fliph, flipv, mirror, zeroc, attributes);
 
+		// Set up initial drawing values for the tile
 		int x = 0, x_init = 0;
 		int y = 0, y_init = 0;
 		int x_increment = 1;
@@ -135,8 +179,8 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 		int count = 0;
 
 		for (int pix_i = 0; pix_i < 64; pix_i++) {
+			// Get the color for the pixel.
 			uint8_t color_index = extract_bits(tile_rom[tile_rom_ptr + byte_offset], 0b11 << shift, shift);
-			//printf("TRptr: %d, offset: %d, shift: %d, ci: %d\n", tile_rom_ptr, byte_offset, shift, color_index);
 
 			uint32_t color = bg_color;
 			if ((!zeroc || color_index != 0) && tile_id != 0xff) {
@@ -144,15 +188,15 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 				color = (palettes[i0] << 16) | (palettes[i0 + 1] << 8) | (palettes[i0 + 2]);
 			}
 			
-			//printf("x: %d, y:%d, c:%x, ci:%d", x, y, color, color_index);
 			if (mirror) {
-				set_pixel(surf, y + t_x, x + t_y, color, true);
-				//printf("x: %d, y:%d, c:%x\n", y, x, color);
+				// Flip the pixel x and y within the tile if it's mirrored.
+				set_pixel(surf, y + t_x + x_scroll, x + t_y + y_scroll, color);
 			}
 			else {
-				set_pixel(surf, x + t_x, y + t_y, color, false);
+				set_pixel(surf, x + t_x + x_scroll, y + t_y + y_scroll, color);
 			}
 
+			// Increment pixel drawing values
 			count++;
 			x += x_increment;
 			if (count > 7) {
@@ -200,7 +244,6 @@ int render_sprites(SDL_Surface* surf, kvm_memory* mem) {
 	for (int sprite_i = 0; sprite_i < 1; sprite_i++) {
 		uint8_t t_x = sprite_x[sprite_i];
 		uint8_t t_y = sprite_y[sprite_i];
-		printf("t_x - 1 > 248: %d\n", (uint8_t)(t_x - 1) > 0xf8);
 		if ((uint8_t)(t_x - 1) > 248 || (uint8_t)(t_y - 1) > 248) {
 			// Illegal sprite position, do not render.
 			continue;
@@ -257,11 +300,11 @@ int render_sprites(SDL_Surface* surf, kvm_memory* mem) {
 
 				//printf("x: %d, y:%d, c:%x, ci:%d", x, y, color, color_index);
 				if (mirror) {
-					set_pixel(surf, y + t_x, x + t_y, color, true);
+					set_pixel(surf, y + t_x, x + t_y, color);
 					//printf("x: %d, y:%d, c:%x\n", y, x, color);
 				}
 				else {
-					set_pixel(surf, x + t_x, y + t_y, color, false);
+					set_pixel(surf, x + t_x, y + t_y, color);
 				}
 			}
 

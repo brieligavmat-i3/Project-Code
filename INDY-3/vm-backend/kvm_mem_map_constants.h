@@ -1,9 +1,13 @@
 /* Define several constants for immutable memory locations
+*  As well as one for window size.
 *  Author: Matthew Watson
 */
 
 #pragma once
-#define OUTER_WINDOW_SIZE 720
+
+// This is not a memory constant but I need it in enough spots for it to go here.
+#define OUTER_WINDOW_SIZE 512
+#define WINDOW_SIZE 256
 
 
 // In the memory map, 0xE000 is the start point for program ROM information.
@@ -22,7 +26,8 @@
 #define VRAM_COLOR_PALETTES 0x8003
 #define VRAM_SCREEN_FLAGS 0x80FF
 #define VRAM_TILE_LINE_SHIFT_TABLE 0x8100
-#define VRAM_TILE_LINE_LOCK_TABLE 0x8200
+#define VRAM_TILE_LINE_LOCK_TABLE 0x8120
+#define VRAM_PERPENDICULAR_SCROLL 0x8140
 #define	VRAM_PIX_OFFSET_MAP 0x8300
 
 #define VRAM_TILE_MAP_TABLE 0x8400

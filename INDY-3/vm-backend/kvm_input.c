@@ -85,7 +85,7 @@ void kvm_input_get_mouse(kvm_memory* mem) {
 	int x, y;
 	uint32_t mouseState = SDL_GetMouseState(&x, &y);
 	
-	float scale = 256.0 / OUTER_WINDOW_SIZE;
+	float scale = (float)WINDOW_SIZE / OUTER_WINDOW_SIZE;
 
 	x *= scale;
 	y *= scale;
