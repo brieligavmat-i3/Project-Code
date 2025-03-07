@@ -152,9 +152,6 @@ JSR clear_tiles
 LDA #1
 STA screen_flags    ; set scroll mode to Y
 
-LDX #5
-LDA #
-
 
 ; Main loop
 .program_main_loop
