@@ -129,12 +129,12 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 		if (scroll_mode == 1) {
 			x_scroll = scroll_table[t_ycoord];
 
-			if(lock_table[t_ycoord]) y_scroll = perpendicular_scroll;
+			if(!lock_table[t_ycoord]) y_scroll = perpendicular_scroll;
 		}
 		else {
 			y_scroll = scroll_table[t_xcoord];
 			
-			if(lock_table[t_xcoord]) x_scroll = perpendicular_scroll;
+			if(!lock_table[t_xcoord]) x_scroll = perpendicular_scroll;
 		}
 
 		uint8_t tile_id = tile_map[tile_i];
