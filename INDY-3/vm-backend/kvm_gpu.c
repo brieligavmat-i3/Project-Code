@@ -68,15 +68,17 @@ uint8_t extract_bits(uint8_t b, uint8_t mask, uint8_t shift) {
 
 void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color, uint8_t *pix_offset_map, bool x_scroll_flag, bool locked, int num_locks)
 {
-	int px = x % WINDOW_SIZE; //potential optimization here if it's a problem later.
-	int py = y % WINDOW_SIZE;
+	uint8_t px = x % WINDOW_SIZE; //potential optimization here if it's a problem later.
+	uint8_t py = y % WINDOW_SIZE;
 	if (!locked) {
 		if (x_scroll_flag) {
-			py = pix_offset_map[py - (num_locks * 8)];
+			py += pix_offset_map[py>>3]<<3;
+			//py %= WINDOW_SIZE;
 			//if (py == 0xff)return;
 		}
 		else {
-			px = pix_offset_map[px - (num_locks * 8)];
+			px += pix_offset_map[px>>3]<<3;
+			//px %= WINDOW_SIZE;
 			//if (px == 0xff)return;
 		}
 	}
@@ -88,62 +90,66 @@ void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color, uint8_t *pix_of
 	*target_pixel = color;
 }
 
-// This is called if bit 2 of screen flags is set when a graphics update is triggered.
-void tile_lock_update(kvm_memory* mem) {
+// This is called every graphics update, because the contents of the offset table are dependent on the perpendicular scroll value.
+void tile_lock_update(kvm_memory* mem, uint8_t scroll) {
 	uint8_t* lock_table = mem->data + VRAM_TILE_LINE_LOCK_TABLE;
 	uint8_t* pix_offsets = mem->data + VRAM_PIX_OFFSET_MAP;
 
-	// Update the table
-	/*int offset = 0;
-	for (int i = 0; i < 256; i++) {
-		if (i % 8 == 0) {
-			if (lock_table[i / 8]) {
-				offset += 8;
-			}
-		}
-		if (i + offset >= 256) {
-			pix_offsets[i] = 0xff;
-		}
-		else {
-			pix_offsets[i] = i + offset;
-		}
-	}*/
+	uint8_t scroll_offset = (scroll / 8) + 1; // scroll divided by 8 to get offset in tile units
+	//if (scroll % 8 == 0) scroll_offset--;
 
-	int offset = 0;
-	int prev_locked = 0;
-	int start_pos = 0;
-	for (int i = 0; i < 32; i++) {
+	// Zero out the pixel table and the leftmost lock table
+	for (int i = 0; i < 64; i++) {
+		pix_offsets[i] = 0;
+	}
+
+	// stores the leftmost locks (there's a max of 16) in the form of "num_lines, start_index"
+	uint8_t* leftmost_lock_table = pix_offsets + 32;
+	uint8_t lock_count = 0;
+
+	lock_table[0] = 0; lock_table[31] = 0; // disable locking of first and last lines (may change in future)
+
+	for (uint8_t i = 0; i < 32; i++) {
 		if (lock_table[i]) {
-			if (prev_locked == 0) {
-				start_pos = i * 8;
-			}
-			prev_locked++;
-			offset += 8;
-		}
-		else {
-			for (int j = start_pos; j < start_pos + prev_locked * 8; j++) {
-				pix_offsets[j] = (uint8_t)offset;
-			}
-			
-			for (int j = i * 8; j < i * 8 + 8; j++) {
-				pix_offsets[j] = (uint8_t)offset;
-			}
+			uint8_t l = i-1;
+			if (!lock_table[l]) {
+				// add leftmost lock.
+				l = lock_count << 1;
+				leftmost_lock_table[l] = 1;
+				leftmost_lock_table[++l] = i;
 
-			prev_locked = 0;
-		}
-	}
-	kvm_memory_print_hexdump(mem, 0x8300, 0x100);
-
-	for (int i = 0; i < 256; i++) {
-		if (pix_offsets[i] + i >= 256) {
-			pix_offsets[i] = 0xff;
-		}
-		else {
-			pix_offsets[i] += i;
+				lock_count++;
+			}
+			else {
+				l = (lock_count-1) << 1;
+				leftmost_lock_table[l]++;
+			}
 		}
 	}
 
-	kvm_memory_print_hexdump(mem, 0x8300, 0x100);
+
+	/*
+	* For each leftmost lock,
+	*	repeat scroll-total locks times
+	*		increase that cell's shift amount by the lock's shift amount
+	*/
+	for (uint8_t i = 0; i < 32; i += 2) {
+		if (leftmost_lock_table[i] == 0) {
+			// If we reach a zero, we're finished updating the table.
+			break;
+		}
+
+		for (uint8_t j = 0; j < scroll_offset; j++) {
+			//if (j > scroll_offset) break;
+			uint8_t index = (leftmost_lock_table[i + 1] + j) % 32;
+			uint8_t current_offset = leftmost_lock_table[i];
+			pix_offsets[index] += (current_offset + pix_offsets[index+current_offset]);
+		}
+	}
+
+	//kvm_memory_print_hexdump(mem, 0x8100, 0x100);
+	//kvm_memory_print_hexdump(mem, 0x8300, 0x100);
+	//printf("\n\n");
 
 	uint8_t* screen_flags = mem->data + VRAM_SCREEN_FLAGS;
 	*screen_flags &= 0b11111101; // Clear the lock update flag
@@ -176,10 +182,7 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 	uint8_t scroll_mode = extract_bits(screen_flags, 0b1, 0); // zero represents x-scroll, 1 is y-scroll
 
 	uint8_t lock_update = extract_bits(screen_flags, 0b10, 0);
-	if (lock_update) {
-		//printf("Lock update\n");
-		tile_lock_update(mem);
-	}
+	tile_lock_update(mem, perpendicular_scroll);
 
 	int num_locks = 0; // for doing line locking stuff. Pixel coords after locked lines will be subtracted by this.
 

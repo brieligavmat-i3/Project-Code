@@ -162,7 +162,7 @@ STA tile_line_lock_table X
 INX
 STA tile_line_lock_table X
 
-LDX #$10
+LDX #$8
 LDA #1
 STA tile_line_lock_table X
 INX
@@ -177,6 +177,9 @@ LDX #$F
 STA tile_att_p1 x
 LDX #$12
 STA tile_att_p1 x
+
+LDA #$00 ; set the scroll
+STA tile_perpendicular_scroll
 
 
 ; Main loop
@@ -195,6 +198,14 @@ STA tile_att_p1 x
     ;INC tile_line_shift_table X
     INX
     ;DEC tile_line_shift_table X
+
+    ; if scroll > (256 - 8*6), set scroll to 0
+    LDA tile_perpendicular_scroll
+    CMP #208
+    BNE scr
+        LDA #0
+        STA tile_perpendicular_scroll
+    .scr
 
     LDX #128 ; delay for 1/7 second
     LDY #0
