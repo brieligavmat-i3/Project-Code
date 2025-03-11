@@ -31,6 +31,12 @@
     <Filter Include="Source Files\vm">
       <UniqueIdentifier>{05d1f5ce-c6a0-4b68-9d4c-8438c92b02f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\tinyfile">
+      <UniqueIdentifier>{fdd85995-57a9-40f2-a65f-427afc3446dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tinyfile">
+      <UniqueIdentifier>{77c0597c-dc53-475a-9413-38e64a2bf3df}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -72,6 +78,9 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
+    <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c">
+      <Filter>Source Files\Tinyfile</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\imstb_truetype.h">
@@ -112,6 +121,9 @@
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h">
+      <Filter>Header Files\tinyfile</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
