@@ -72,15 +72,22 @@ void set_pixel(SDL_Surface* surface, int x, int y, Uint32 color, uint8_t *pix_of
 	uint8_t py = y % WINDOW_SIZE;
 	if (!locked) {
 		if (x_scroll_flag) {
-			py += pix_offset_map[py>>3]<<3;
+			py -= num_locks * 8; // squish all pixels together
+			//py += pix_offset_map[py / 8] * 8;
+			//py += pix_offset_map[py>>3]<<3;
 			//py %= WINDOW_SIZE;
 			//if (py == 0xff)return;
 		}
 		else {
-			px += pix_offset_map[px>>3]<<3;
+			px -= num_locks * 8; // squish all pixels together
+			//px += pix_offset_map[px / 8] * 8;
+			//px += pix_offset_map[px>>3]<<3;
 			//px %= WINDOW_SIZE;
 			//if (px == 0xff)return;
 		}
+	}
+	else {
+		return;
 	}
 	
 
@@ -95,7 +102,7 @@ void tile_lock_update(kvm_memory* mem, uint8_t scroll) {
 	uint8_t* lock_table = mem->data + VRAM_TILE_LINE_LOCK_TABLE;
 	uint8_t* pix_offsets = mem->data + VRAM_PIX_OFFSET_MAP;
 
-	uint8_t scroll_offset = (scroll / 8) + 1; // scroll divided by 8 to get offset in tile units
+	//uint8_t scroll_offset = (scroll / 8) + 1; // scroll divided by 8 to get offset in tile units
 	//if (scroll % 8 == 0) scroll_offset--;
 
 	// Zero out the pixel table and the leftmost lock table
@@ -134,22 +141,25 @@ void tile_lock_update(kvm_memory* mem, uint8_t scroll) {
 	*		increase that cell's shift amount by the lock's shift amount
 	*/
 	for (uint8_t i = 0; i < 32; i += 2) {
-		if (leftmost_lock_table[i] == 0) {
-			// If we reach a zero, we're finished updating the table.
-			break;
+		if (leftmost_lock_table[30-i] == 0) {
+			// If we reach a zero, ignore it. There's not that many locks.
+			continue;
 		}
 
-		for (uint8_t j = 0; j < scroll_offset; j++) {
+		for (uint8_t j = 0; j < (32-i); j++) {
 			//if (j > scroll_offset) break;
-			uint8_t index = (leftmost_lock_table[i + 1] + j) % 32;
+			uint8_t index = (leftmost_lock_table[i + 1] + j);
+			if (index >= 32) {
+				printf("Danger!\n");
+			}
 			uint8_t current_offset = leftmost_lock_table[i];
 			pix_offsets[index] += (current_offset + pix_offsets[index+current_offset]);
 		}
 	}
 
-	//kvm_memory_print_hexdump(mem, 0x8100, 0x100);
-	//kvm_memory_print_hexdump(mem, 0x8300, 0x100);
-	//printf("\n\n");
+	/*kvm_memory_print_hexdump(mem, 0x8100, 0x100);
+	kvm_memory_print_hexdump(mem, 0x8300, 0x100);
+	printf("\n\n");*/
 
 	uint8_t* screen_flags = mem->data + VRAM_SCREEN_FLAGS;
 	*screen_flags &= 0b11111101; // Clear the lock update flag
@@ -188,6 +198,11 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 	SDL_LockSurface(surf);
 	for (int tile_i = 0; tile_i < 1024; tile_i++) {
+		if (tile_i % 32 == 0) {
+			printf("Row break\n");
+			num_locks = 0;
+		}
+
 		int t_x = (tile_i * 8) % 256;
 		int t_y = (tile_i * 8) / 256 * 8;
 
@@ -204,7 +219,10 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 
 			if (lock_table[t_ycoord]) {
 				is_locked = true;
-				if (t_xcoord == 0) num_locks++;
+				if (t_xcoord == 0) {
+					num_locks++;
+					printf("locks: %d\n", num_locks);
+				}
 			}
 			else {
 				y_scroll = perpendicular_scroll;
@@ -215,7 +233,10 @@ int render_tiles(SDL_Surface* surf, kvm_memory *mem) {
 			
 			if (lock_table[t_xcoord]) {
 				is_locked = true;
-				if (t_ycoord == 0) num_locks++;
+				if (t_ycoord == 0) {
+					num_locks++;
+					printf("locks: %d\n", num_locks);
+				}
 			}
 			else { 
 				x_scroll = perpendicular_scroll; 
