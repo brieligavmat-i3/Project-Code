@@ -1,13 +1,6 @@
 # Tool to assemble a text file of assembly instructions into actual bytes to be read by the VM
 # Author: Matthew Watson
 
-'''
-TODO: Allow user to name specific addresses, and have the program know if they are zero page addresses, so it can assemble properly.
-Something like:
-.zpvar $56 ; zpvar would be a zero page address
-.graphicspg1 $2300 ; graphicspg1 would be an absolute address
-'''
-
 from enum import Enum
 
 class Instr_class(Enum):
