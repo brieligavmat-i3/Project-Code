@@ -10,6 +10,8 @@
 #include "kvm_cpu.h"
 #include "kvm_memory.h"
 
+#include "kvm_mem_map_constants.h"
+
 void quit(void);
 
 int main(int argc, char* argv[]) {
@@ -33,13 +35,14 @@ int main(int argc, char* argv[]) {
 	printf("Enter filename to assemble and run (omit '.txt'): ");
 	char fname[50];
 
-	scanf("%s", fname);
+	if(scanf("%s", fname) != 1) return -1;
+	fname[49] = 0;
 	printf("\nFilename: %s\n", fname);
 
 	char sys_string[100] = "python assembler.py ";
 
 	char prog_count_str[20];
-	sprintf(prog_count_str, "%d", PROGRAM_COUNTER_ENTRY_POINT);
+	sprintf(prog_count_str, "%d", INSTRUCTION_ROM_MEM_LOC);
 
 	strcat(sys_string, fname);
 	strcat(sys_string, ".txt ");
@@ -70,12 +73,12 @@ int main(int argc, char* argv[]) {
 	// Get the file size (i.e. number of bytes to copy over to the array)
 	fseek(code_file, 0L, SEEK_END);
 	size_t file_size = ftell(code_file);
-	printf("Code file size: %d bytes.\n", file_size);
+	printf("Code file size: %d bytes.\n", (int)file_size);
 	rewind(code_file);
 
 	// Copy the data into memory
 	// TODO: add bounds checking
-	fread(mem->data + PROGRAM_COUNTER_ENTRY_POINT, 1, file_size, code_file);
+	fread(mem->data + INSTRUCTION_ROM_MEM_LOC, 1, file_size, code_file);
 	fclose(code_file);
 
 	

@@ -31,6 +31,9 @@
     <Filter Include="Source Files\vm">
       <UniqueIdentifier>{05d1f5ce-c6a0-4b68-9d4c-8438c92b02f5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\assembler">
+      <UniqueIdentifier>{703372cc-78f8-4226-8ba1-386a7de7c568}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -72,6 +75,18 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\test_kvm.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_input.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_gpu.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\imstb_truetype.h">
@@ -111,6 +126,18 @@
       <Filter>Header Files\vm</Filter>
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_memory.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_input.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_gpu.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>

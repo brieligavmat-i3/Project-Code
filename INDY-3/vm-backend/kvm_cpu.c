@@ -9,6 +9,7 @@
 #include "leakcheck_util.h"
 
 #include "kvm_cpu.h"
+#include "kvm_mem_map_constants.h"
 
 static uint8_t extract_bits(uint8_t target, uint8_t mask, uint8_t shift) {
 	return (target & mask) >> shift;
@@ -618,6 +619,7 @@ static void pull_stack(kvm_cpu* cpu, kvm_memory* mem, kvm_register_operand r) {
 }
 
 static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction* instr, uint8_t* out_value, uint16_t* out_address) {
+	
 	uint16_t target_address = (uint16_t)instr->lowbyte;
 	uint8_t value_at_address = 0;
 
@@ -644,7 +646,7 @@ static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction
 		lbyte = mem->data[target_address];
 		hbyte = mem->data[target_address + 1];
 
-		target_address = lbyte | ((uint16_t)hbyte << 8);
+		target_address = (uint16_t)lbyte | ((uint16_t)hbyte << 8);
 	}
 	break;
 	case kvma_yind:
@@ -654,7 +656,7 @@ static void get_address_and_value(kvm_cpu* cpu, kvm_memory* mem, kvm_instruction
 		lbyte = mem->data[target_address];
 		hbyte = mem->data[target_address + 1];
 
-		target_address = lbyte | ((uint16_t)hbyte << 8);
+		target_address = (uint16_t)lbyte | ((uint16_t)hbyte << 8);
 		target_address += cpu->y_index;
 	}
 	break;
@@ -1175,7 +1177,7 @@ void kvm_cpu_cycle(kvm_cpu* cpu, kvm_memory* mem) {
 
 	cpu->program_counter = pc;
 
-	kvm_cpu test_cpu = *cpu;
+	kvm_cpu test_cpu = *cpu; // for debugging, lets you see the cpu's stuff in the VS debugger.
 
 	kvm_cpu_execute_instr(cpu, mem);
 	/*
@@ -1199,7 +1201,7 @@ kvm_cpu* kvm_cpu_init(void) {
 
 	cpu->stack_ptr = STACK_PTR_DEFAULT;
 
-	cpu->program_counter = PROGRAM_COUNTER_ENTRY_POINT;
+	cpu->program_counter = INSTRUCTION_ROM_MEM_LOC;
 
 	cpu->processor_status = DEFAULT_PROCESSOR_STATUS;
 

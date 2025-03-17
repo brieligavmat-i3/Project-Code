@@ -1,0 +1,17 @@
+JSR my_subroutine
+JMP ending
+
+.my_subroutine
+LDA #2 ;print cpu status
+STA 0
+
+LDX #$FF
+LDY #$80
+RTS
+
+.ending
+LDA $20
+
+;quit
+LDA #1
+STA 0
