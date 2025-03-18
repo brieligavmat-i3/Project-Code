@@ -33,6 +33,11 @@
     </Filter>
     <Filter Include="Source Files\assembler">
       <UniqueIdentifier>{703372cc-78f8-4226-8ba1-386a7de7c568}</UniqueIdentifier>
+    <Filter Include="Header Files\tinyfile">
+      <UniqueIdentifier>{fdd85995-57a9-40f2-a65f-427afc3446dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tinyfile">
+      <UniqueIdentifier>{77c0597c-dc53-475a-9413-38e64a2bf3df}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -86,6 +91,8 @@
     </ClCompile>
     <ClCompile Include="..\vm-backend\kvm_gpu.c">
       <Filter>Source Files\vm</Filter>
+    <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c">
+      <Filter>Source Files\Tinyfile</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +146,8 @@
     </ClInclude>
     <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
       <Filter>Header Files\vm</Filter>
+    <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h">
+      <Filter>Header Files\tinyfile</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -26,6 +26,7 @@
     <ClCompile Include="..\imgui-master\imgui_draw.cpp" />
     <ClCompile Include="..\imgui-master\imgui_tables.cpp" />
     <ClCompile Include="..\imgui-master\imgui_widgets.cpp" />
+    <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c" />
     <ClCompile Include="..\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
@@ -55,6 +56,7 @@
     <ClInclude Include="..\imgui-master\imstb_textedit.h" />
     <ClInclude Include="..\imgui-master\imstb_truetype.h" />
     <ClInclude Include="..\vm-backend\kvm.h" />
+    <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
     <ClInclude Include="..\vm-backend\kvm_gpu.h" />
     <ClInclude Include="..\vm-backend\kvm_input.h" />

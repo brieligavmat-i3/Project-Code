@@ -9,11 +9,12 @@ and may not be redistributed without written permission.*/
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_sdlrenderer2.h"
 #include <vector>
-
+#include "tinyfiledialogs.h"
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
+
 
 int main(int argc, char* args[])
 {
@@ -65,7 +66,7 @@ int main(int argc, char* args[])
     std::string temp_preset_name = ""; // Holds preset before submission
     std::vector<std::string> history; // Stores each entry separately
 
-
+    
     while (!quit)
     {
         // Handle SDL events
@@ -86,7 +87,63 @@ int main(int argc, char* args[])
         {
             if (ImGui::BeginMenu("File")) // create drop down menu named file
             {
-                if (ImGui::MenuItem("Open")) { /* Handle open action */ } // adding selectable item inside file
+                if (ImGui::MenuItem("Open"))
+                {
+                    const char* filter[] = { "*.txt" };
+                    const char* filename = tinyfd_openFileDialog("Open File", "", 1, filter, "Text Files", 0);
+
+                    if (filename)
+                    {
+                        SDL_RWops* file = SDL_RWFromFile(filename, "r");
+                        if (file)
+                        {
+                            displayed_text.clear(); // Clear existing text
+
+                            Sint64 file_size = SDL_RWsize(file);
+                            if (file_size > 0)
+                            {
+                                static char buffer[4096] = "";
+
+                                std::vector<char> temp_buffer(file_size + 1, '\0');
+                                SDL_RWread(file, temp_buffer.data(), 1, file_size);
+
+                                // Now copy the contents to the buffer
+                                strncpy_s(buffer, sizeof(buffer), temp_buffer.data(), _TRUNCATE);
+                                buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+
+                                // Update displayed_text
+                                displayed_text = buffer; // Use the buffer directly for simplicity
+
+                                // Log the loaded text
+                                printf("Loaded text: %s\n", displayed_text.c_str());
+
+                                // In the UI code, make sure to render displayed_text
+                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
+
+
+                                // Log to see if data is being read
+                                printf("File successfully loaded: %s\n", filename);
+                            }
+                            else
+                            {
+                                printf("Error: File is empty or cannot be read\n");
+                            }
+                            SDL_RWclose(file);
+                        }
+                        else
+                        {
+                            printf("Failed to open file: %s\n", SDL_GetError());
+                        }
+                    }
+                    else
+                    {
+                        printf("Failed to select file or user canceled the dialog.\n");
+                    }
+
+                }
+        
+        
+
                 if (ImGui::MenuItem("Save")) { /* Handle save action */ }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
                 ImGui::EndMenu();
@@ -165,7 +222,7 @@ int main(int argc, char* args[])
         ImGui::BeginChild("CodePreview", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::TextWrapped("%s", displayed_text.c_str());
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(500, 200)); 
 
         ImGui::EndChild();
 
@@ -182,7 +239,7 @@ int main(int argc, char* args[])
             ImGui::Text("Select Instruction:");
 
             // Capture which button was clicked and set preset_name
-            if (ImGui::Button("Preset 1")) { temp_preset_name = "Preset 1"; show_text_input_window = true; }
+            if (ImGui::Button("NOP")) { temp_preset_name = "NOP"; show_text_input_window = true; }
             if (ImGui::Button("Preset 2")) { temp_preset_name = "Preset 2"; show_text_input_window = true; }
             if (ImGui::Button("Preset 3")) { temp_preset_name = "Preset 3"; show_text_input_window = true; }
 
