@@ -239,7 +239,7 @@ int main(int argc, char* args[])
             ImGui::Text("Select Instruction:");
 
             // Capture which button was clicked and set preset_name
-            if (ImGui::Button("Preset 1")) { temp_preset_name = "Preset 1"; show_text_input_window = true; }
+            if (ImGui::Button("NOP")) { temp_preset_name = "NOP"; show_text_input_window = true; }
             if (ImGui::Button("Preset 2")) { temp_preset_name = "Preset 2"; show_text_input_window = true; }
             if (ImGui::Button("Preset 3")) { temp_preset_name = "Preset 3"; show_text_input_window = true; }
 
