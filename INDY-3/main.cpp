@@ -242,6 +242,8 @@ int main(int argc, char* args[])
 
         // Rendering
         ImGui::Render();
+        ImGui::EndFrame();
+
         SDL_SetRenderDrawColor(renderer, 51, 51, 51, 255);
         SDL_RenderClear(renderer);
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
