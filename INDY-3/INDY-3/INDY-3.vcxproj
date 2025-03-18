@@ -118,7 +118,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master\backends;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Libraries\SDL2\lib\x64;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
