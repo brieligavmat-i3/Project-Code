@@ -1,13 +1,6 @@
 # Tool to assemble a text file of assembly instructions into actual bytes to be read by the VM
 # Author: Matthew Watson
 
-'''
-TODO: Allow user to name specific addresses, and have the program know if they are zero page addresses, so it can assemble properly.
-Something like:
-.zpvar $56 ; zpvar would be a zero page address
-.graphicspg1 $2300 ; graphicspg1 would be an absolute address
-'''
-
 from enum import Enum
 
 class Instr_class(Enum):
@@ -90,10 +83,23 @@ def get_int(value:str):
        result = twos_complement_byte(abs(result))
     return result
 
+# This one only works if the address has been defined already. Done during first pass.
+def get_addr(value):
+    try:
+        num = get_int(value)
+    except:
+        num = named_firstpass_addresses[value]
+        #print(hex(named_firstpass_addresses[value]))
+    
+    if num < 0:
+        num = abs(num)
+    
+    return num
+
 def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     if type(value) is str:
         num = get_int(value)
-    elif type(value is int):
+    elif type(value) is int:
         num = value
     else:
         print("Error with add_numeric, type is not int or string")
@@ -108,12 +114,15 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
         # must be one byte worth of data. Will just take the lowest two bytes if it's more.
         working_bytes.append(num & 0xFF)
     else:
-        while num > 0:
-            # If the number is bigger than a byte, add the numbers a byte at a time.
-            working_bytes.append(num & 0xFF)
-            num >>= 8
-           
-            #print(value, num, bytes)
+        if num == 0:
+            working_bytes.append(0)
+        else:
+            while num > 0:
+                # If the number is bigger than a byte, add the numbers a byte at a time.
+                working_bytes.append(num & 0xFF)
+                num >>= 8
+            
+                #print(value, num, bytes)
 
 def check_int16_or_str(value, type:str):
     num = 0
@@ -126,17 +135,6 @@ def check_int16_or_str(value, type:str):
         locations_to_replace[len(working_bytes)] = (value, type)
     return num, is_addr
 
-# This one only works if the address has been defined already. Done during first pass.
-def get_addr(value):
-    try:
-        num = get_int(value)
-    except:
-        num = named_firstpass_addresses[value]
-    
-    if num < 0:
-        num = abs(num)
-    
-    return num
 
 def process_line(line:str):
     # Delete any commented out section
@@ -154,6 +152,7 @@ def process_line(line:str):
         split_line = stripped_line.split(' ')
         if len(split_line) == 1:
             named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
+            #print(named_addresses)
         else:
             named_firstpass_addresses[split_line[0][1:].strip(' \t\n')] = get_int(split_line[1])
         return
@@ -256,10 +255,10 @@ def process_line(line:str):
                 addr_mode = Instr_addr_mode.IMMEDIATE
                 if value.lower()[1:3] == 'hi':
                     named_addr = split_line[2]
-                    num = check_int16_or_str(named_addr, 'hi')
+                    num = check_int16_or_str(named_addr, 'hi')[0] >> 8
                 elif value.lower()[1:3] == 'lo':
                     named_addr = split_line[2]
-                    num = check_int16_or_str(named_addr, 'lo')
+                    num = check_int16_or_str(named_addr, 'lo')[0]
                 else:
                     # normal 8-bit number
                     num = get_int(value[1:])
@@ -270,6 +269,7 @@ def process_line(line:str):
                         # error
                         print("Error, immediate value too large (must be between 0 and 255 or 0x0 and 0xFF)")
                         exit(-1) 
+                current_number = num
                 
             else:
                 check = check_int16_or_str(value, 'all')

@@ -1,5 +1,4 @@
 ; program to mainly test AND, OR, XOR
-
 dey
 dex
 

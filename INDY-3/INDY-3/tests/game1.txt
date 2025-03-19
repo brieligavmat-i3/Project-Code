@@ -1,0 +1,322 @@
+; Constant memory locations
+    
+    ; input locations
+        .keyboard_pos $7C00
+        .mouse_pos $7D00
+    
+
+    ;   VRAM memory locations
+        .bgcolor_pos $8000
+        .palette_pos $8003
+
+        .screen_flags $80FF
+
+        ; Tilemap information
+            ; map table
+            .tile_map_p1 $8400
+            .tile_map_p2 $8500
+            .tile_map_p3 $8600
+            .tile_map_p4 $8700
+
+            ; attribute table
+            .tile_att_p1 $8800
+            .tile_att_p2 $8900
+            .tile_att_p3 $8A00
+            .tile_att_p4 $8B00
+
+            .tile_line_shift_table $8100
+            .tile_line_lock_table $8200
+        
+        ; Sprite information
+        .sprite_x $8C00
+        .sprite_y $8D00
+        .sprite_tile $8E00
+        .sprite_att $8F00
+
+; Game memory locations
+    .mouse_x $10
+    .mouse_y $11
+    .mouse_page $12
+    .mouse_tile $13
+
+; Jump to code start point. This call skips all of the subroutines defined after
+JMP program_begin
+
+; Clear Titles
+; Subroutine: sets all values in the tile map to $FF
+.clear_tiles
+    LDA #$FF    ; value to clear the tile with
+    LDY #0      ; value to clear the attribute with
+
+    ; clear the first page
+    LDX #0
+    .clear_tiles_pg1
+        STA tile_map_p1 x
+        STY tile_att_p1 x
+        DEX
+    BNE clear_tiles_pg1
+
+    ; clear the second page
+    LDX #0
+    .clear_tiles_pg2
+        STA tile_map_p2 x
+        STY tile_att_p2 x
+        DEX
+    BNE clear_tiles_pg2
+
+    ; clear the third page
+    LDX #0
+    .clear_tiles_pg3
+        STA tile_map_p3 x
+        STY tile_att_p3 x
+        DEX
+    BNE clear_tiles_pg3
+
+    ; clear the fourth page
+    LDX #0
+    .clear_tiles_pg4
+        STA tile_map_p4 x
+        STY tile_att_p4 x
+        DEX
+    BNE clear_tiles_pg4
+
+    RTS
+
+; Load graphics
+; Subroutine: loads the graphics and palette files
+    .load_graphics
+    ; load the graphics
+
+    LDX #low graphics_file
+    LDY #high graphics_file
+
+    STX 1
+    STY 2
+
+    LDA #3
+    STA 0 ;trigger system call to load the graphics
+
+    CLC
+    LDA #10 ; check for success
+    ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+    BCS end_program
+
+    ; load the palettes
+
+    LDX #low palette_file
+    LDY #high palette_file
+
+    STX 1
+    STY 2
+
+    LDA #2
+    STA 0 ;trigger system call to load the palettes
+
+    CLC
+    LDA #10 ; check for success
+    ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+    BCS end_program
+    RTS
+
+; Check for quit
+; Subroutine: jumps to end_program if the 'escape' key is pressed.
+.check_for_quit
+    LDA #50 ; get key input
+    STA 0
+
+    LDX #52 ; escape key is 52
+    LDA keyboard_pos x
+    CMP #0
+
+    BNE end_program
+    RTS
+
+; Delay X | (Y<<8) milliseconds
+; Subroutine: Calls a 'delay' system call using the current values of x and y (x is low, y is high)
+.delay_millis
+    LDA #14
+    STX 1
+    STY 2
+    STA 0
+    RTS
+
+; Handle Mouse 
+; Subroutine: Gathers the mouse input
+.handle_mouse
+    LDA #51
+    STA 0   ; Get the mouse input
+
+    ;Put two tiles representing the mouse coords at top left of screen
+        ; find the mouse position and load it into general RAM
+            LDX #0
+            LDA mouse_pos x
+            STA mouse_x
+            STA sprite_x
+
+            LDX #1
+            LDA mouse_pos X
+            STA mouse_y
+            STA sprite_y
+
+        ; divide the positions by 8 (to get a tile coordinate instead of a pixel coordinate)
+            SHR mouse_x
+            SHR mouse_x
+            SHR mouse_x
+
+            SHR mouse_y
+            SHR mouse_y
+            SHR mouse_y
+        
+        LDX #0
+        LDA mouse_x
+        STA tile_map_p1 X
+        INX
+        LDA mouse_y
+        STA tile_map_p1 X
+    
+    LDX #2
+    LDA mouse_pos X
+    CMP #0
+
+    BEQ handle_mouse_not_click
+
+        ; If there was a mouse click, it will execute the following instructions.
+
+        ; find the mouse position and load it into general RAM
+            LDX #0
+            LDA mouse_pos x
+            STA mouse_x
+
+            LDX #1
+            LDA mouse_pos X
+            STA mouse_y
+
+        ; divide the positions by 8 (to get a tile coordinate instead of a pixel coordinate)
+            SHR mouse_x
+            SHR mouse_x
+            SHR mouse_x
+
+            SHR mouse_y
+            SHR mouse_y
+            SHR mouse_y
+
+        LDA #0          ; reset calculation values
+        STA mouse_tile
+
+        LDA mouse_y
+        STA mouse_page
+        SHR mouse_page ; divide mouse y by 8 and put it in mouse_page
+        SHR mouse_page
+        SHR mouse_page
+
+        ; (mouse_y * 32) + mouse_x = tile value
+
+        ; Loop multiply mouse_y by 32
+        LDY #5
+        .handle_mouse_loop_1
+            SHL mouse_y
+
+            DEY
+            BNE handle_mouse_loop_1 
+        
+        CLC
+        LDA mouse_tile
+        ADC mouse_x
+        ADC mouse_y     ; add to get the proper mouse tile coordinate
+        STA mouse_tile
+        
+        ; This stuff puts the proper tile page address on zero page address 20 and 21
+        ; We'll use this address for indirection
+            LDA #hi tile_map_p1
+            STA $21
+            LDA #lo mouse_page
+            LDA mouse_page
+            CLC 
+            ADC $21
+            STA $21
+
+            LDA #lo tile_map_p1
+            STA $20
+
+        ; This stuff puts the proper tile attribute page address on zero page address 30 and 31
+        ; We'll use this address for indirection
+            LDA #hi tile_att_p1
+            STA $31
+            LDA mouse_page
+            CLC 
+            ADC $31
+            STA $31
+
+            LDA #lo tile_att_p1
+            STA $30
+
+        LDY mouse_tile
+
+        LDA #$29 ; 41 in hex (blank face)
+
+        STA ($20) Y
+
+        LDA #$11 ; the palette to set the tile to, plus use zero color tag
+        STA ($30) Y
+
+    .handle_mouse_not_click
+
+    RTS 
+
+.program_begin ; PROGRAM STARTS HERE
+
+JSR load_graphics
+JSR clear_tiles
+
+; Set background color
+    LDX #0
+    LDA #49
+    STA bgcolor_pos X
+    INX
+    LDA #47
+    STA bgcolor_pos X
+    INX
+    LDA #53
+    STA bgcolor_pos X
+
+LDA #$2B ; tile for mouse pointer
+STA sprite_tile
+LDA #$10 ; attributes for mouse pointer
+STA sprite_att
+
+; Main loop
+.program_main_loop
+
+    JSR check_for_quit  ; check for quit also gets the keyboard input
+
+    ;LDX #0 ; num0 key is 0
+    ;LDA keyboard_pos x
+    ;CMP #2
+    ;BNE #3 ; skip the next command if the result of the CMP is not zero (JSR is a 3-byte instruction)
+    JSR handle_mouse
+
+    LDA #100
+    STA 0   ; graphics refresh system call
+
+    LDX #16 ; delay for 1/60 second
+    LDY #0
+    JSR delay_millis
+
+    JMP program_main_loop
+
+
+.end_program
+INC 0 ; quit
+
+
+; Data section
+
+    .graphics_file
+    dat "exg"
+    dat 0   ; null terminator, as it's not added automatically by the assembler (possible future todo)
+
+    .palette_file
+    dat "exp"
+    dat 0

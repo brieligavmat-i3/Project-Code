@@ -5,6 +5,8 @@
 
 # KSU Micro VM binary files
 *.kvmbin
+*.kvmpix
+*.kvmpal
 
 # User-specific files
 *.rsuser

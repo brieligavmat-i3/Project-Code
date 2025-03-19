@@ -1,0 +1,32 @@
+.large_address $55FF
+.small_address $33
+
+LDA #hi large_address
+PHA
+LDA #lo large_address
+PHA
+
+LDA #0
+PHA
+
+LDA #hi small_address
+PHA
+lda #lo small_address
+PHA
+
+LDA #0
+PHA
+
+LDA #hi data_addr
+PHA
+LDA #lo data_addr
+PHA
+
+INC 0
+
+dat "some filler of space"
+dat 0
+
+.data_addr
+dat "some data"
+dat 0

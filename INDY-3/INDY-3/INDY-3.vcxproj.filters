@@ -31,8 +31,11 @@
     <Filter Include="Source Files\vm">
       <UniqueIdentifier>{05d1f5ce-c6a0-4b68-9d4c-8438c92b02f5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Source Files\assembler">
-      <UniqueIdentifier>{703372cc-78f8-4226-8ba1-386a7de7c568}</UniqueIdentifier>
+    <Filter Include="Header Files\tinyfile">
+      <UniqueIdentifier>{fdd85995-57a9-40f2-a65f-427afc3446dd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tinyfile">
+      <UniqueIdentifier>{77c0597c-dc53-475a-9413-38e64a2bf3df}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -75,14 +78,20 @@
     <ClCompile Include="..\vm-backend\test_cpu.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\assembler.c">
-      <Filter>Source Files\assembler</Filter>
+    <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c">
+      <Filter>Source Files\Tinyfile</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\test_assembler.c">
-      <Filter>Source Files\assembler</Filter>
+    <ClCompile Include="..\vm-backend\test_kvm.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\vm-backend\str_uint16_hash.c">
-      <Filter>Source Files\vm-utilities</Filter>
+    <ClCompile Include="..\vm-backend\kvm.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_gpu.c">
+      <Filter>Source Files\vm</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_input.c">
+      <Filter>Source Files\vm</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,11 +134,20 @@
     <ClInclude Include="..\vm-backend\kvm_memory.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
-    <ClInclude Include="..\vm-backend\assembler.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h">
+      <Filter>Header Files\tinyfile</Filter>
     </ClInclude>
-    <ClInclude Include="..\vm-backend\str_uint16_hash.h">
-      <Filter>Header Files\vm-utilities</Filter>
+    <ClInclude Include="..\vm-backend\kvm.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_gpu.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_input.h">
+      <Filter>Header Files\vm</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
+      <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
