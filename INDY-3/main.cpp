@@ -10,7 +10,10 @@ and may not be redistributed without written permission.*/
 #include "imgui_impl_sdlrenderer2.h"
 #include <vector>
 #include "tinyfiledialogs.h"
-#include "kvm.h"
+
+extern "C" {
+    #include "kvm.h"
+}
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 640;
@@ -50,8 +53,6 @@ int main(int argc, char* args[])
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
-
-    kvm_init();
 
     // Setup ImGui SDL2 + SDL_Renderer2 bindings
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
