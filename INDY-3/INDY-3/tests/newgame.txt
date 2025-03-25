@@ -34,10 +34,10 @@
         .sprite_att $8F00
 
 ; Game memory locations
-    .mouse_x $10
-    .mouse_y $11
-    .mouse_page $12
-    .mouse_tile $13
+    .player_x $150
+    .player_y $151
+    .player_sprites $152 ; contains the four tiles of the player sprite
+    .player_atts $156    ; contains the attributes for said tiles
 
 ; Jump to code start point. This call skips all of the subroutines defined after
 JMP program_begin
@@ -79,23 +79,6 @@ JMP program_begin
         STY tile_att_p4 x
         DEX
     BNE clear_tiles_pg4
-
-    RTS
-
-; Initialize Ground
-; Subroutine: Uses the data section (.floor_tiles, .floor_attributes) to draw the ground
-.init_ground
-    LDA floor_tiles         ; value to clear the tile with
-    LDY floor_attributes    ; value to clear the attribute with
-
-    ; clear the first page
-    LDX #192
-    .clear_tiles_pg1
-        STA tile_map_p4 x
-        STY tile_att_p4 x
-        INX
-        CMP #223
-    BNE clear_tiles_pg1    
 
     RTS
 
@@ -159,6 +142,111 @@ JMP program_begin
     STA 0
     RTS
 
+; Initialize Ground
+; Subroutine: Uses the data section (.floor_tiles, .floor_attributes) to draw the ground
+.init_ground
+    .counter $200 ; counter variable at address 200hex
+    LDX #32
+    STX counter
+
+    LDA floor_tiles         ; value to clear the tile with
+    LDY floor_attributes    ; value to clear the attribute with
+
+    ; clear the first line of ground
+    LDX #160
+    .init_ground_pt1
+        STA tile_map_p4 x
+        STY tile_att_p4 x
+        INX
+        DEC counter
+    BNE init_ground_pt1  
+
+    ; initialize second and third rows of tiles
+    LDX #1 
+    LDA floor_tiles X         ; value to clear the tile with
+    LDY floor_attributes X    ; value to clear the attribute with
+
+    LDX #64
+    STX counter
+
+    LDX #192
+    .init_ground_pt2
+        STA tile_map_p4 X
+        STY tile_att_p4 X
+        INX
+        DEC counter
+    BNE init_ground_pt2
+
+    RTS
+
+; Initialize player sprite
+; Subroutine: loads the correct sprite tiles/attributes for the player's tank.
+.init_player_sprite
+    ; Sprite 0: top left
+    ; Sprite 1: top right
+    ; Sprite 2: bottom left
+    ; Sprite 3: bottom right
+    
+    LDX #0
+    LDA #$30    ; upper tank
+    LDY #$10    ; transparency, palette 0
+
+    STA player_sprites x
+    STY player_atts x
+    INX
+    LDY #$50    ; x mirror, transparency
+    STA player_sprites x
+    STY player_atts x
+    INX
+
+    LDA #$31    ; lower tank
+    LDY #$10        
+    STA player_sprites X
+    STY player_atts X
+    INX
+    LDY #$50    ; x mirror
+    STA player_sprites X
+    STY player_atts X
+
+    RTS
+
+; Update player sprite
+; Subroutine: Updates the first four sprites in the sprite tables, which are the four parts of the player tank.
+.update_player_sprite
+    ; Sprite 0: top left, x: -8 y: -8
+    ; Sprite 1: top right, x: 0 y: -8
+    ; Sprite 2: bottom left, x: -8 y: 0
+    ; Sprite 3: bottom right, x: 0 y: 0
+
+    LDX #0 ; first sprite
+
+    CLC
+    LDA player_x
+    SBC #8
+    STA sprite_x X
+    LDA player_y
+    CLC
+    SBC #8
+    STA sprite_y X
+    LDA player_sprites X
+    STA sprite_tile X
+    LDa player_atts X
+    STA sprite_att X
+
+    CLC
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y 
+    SBC #8
+    STA sprite_y x
+    LDA player_sprites X
+    STA sprite_tile X
+    LDa player_atts X
+    STA sprite_att X
+
+    RTS
+
 
 .program_begin ; PROGRAM STARTS HERE
 
@@ -177,6 +265,13 @@ JSR clear_tiles
     STA bgcolor_pos X
 
 JSR init_ground
+JSR init_player_sprite
+
+LDA #50
+STA player_x
+STA player_y
+
+JSR update_player_sprite
 
 ; Main loop
 .program_main_loop
@@ -213,5 +308,5 @@ INC 0 ; quit
     dat $F0 ; bottom row, use normal ground tile
 
     .floor_attributes
-    dat $63 ; flip vertical and mirror, use palette 3
+    dat $A3 ; flip vertical and mirror, use palette 3
     dat $03 ; no mirroring, use palette 3
