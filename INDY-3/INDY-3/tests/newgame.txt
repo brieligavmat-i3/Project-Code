@@ -43,10 +43,10 @@
 JMP program_begin
 
 ; Clear Titles
-; Subroutine: sets all values in the tile map to $FF
+; Subroutine: sets all values in the tile map to the value of the accumulator, and the attributes to the value of Y
 .clear_tiles
-    LDA #$FF    ; value to clear the tile with
-    LDY #0      ; value to clear the attribute with
+    ;LDA #$FF    ; value to clear the tile with
+    ;LDY #0      ; value to clear the attribute with
 
     ; clear the first page
     LDX #0
@@ -227,45 +227,44 @@ JMP program_begin
 
     LDX #0 ; first sprite
 
-    CLC
+    SEC     ; riiiight, for subtraction, you have to set the carry flag before starting an operation.
+            ; I am not 100% sure why this is but that's how the 6502 worked so I'm trusting the designers of that knew what they were doing.
     LDA player_x
-    SBC #7
+    SBC #8
     STA sprite_x X
     LDA player_y
-    CLC
-    SBC #7
+    SEC
+    SBC #8
     STA sprite_y X
     LDA player_sprites X
     STA sprite_tile X
     LDA player_atts X
     STA sprite_att X
 
-    CLC
+    SEC
     INX
     LDA player_x
     STA sprite_x x
     LDA player_y
-    SBC #7
+    SBC #8
     STA sprite_y x
     LDA player_sprites X
     STA sprite_tile X
     LDA player_atts X
     STA sprite_att X
 
-    CLC
+    SEC
     INX
     LDA player_x
-    SBC #7
+    SBC #8
     STA sprite_x X
     LDA player_y
-    CLC
     STA sprite_y X
     LDA player_sprites X
     STA sprite_tile X
     LDA player_atts X
     STA sprite_att X
 
-    CLC
     INX
     LDA player_x
     STA sprite_x x
@@ -275,6 +274,8 @@ JMP program_begin
     STA sprite_tile X
     LDA player_atts X
     STA sprite_att X
+
+    RTS ; 'comment out' the rest of the subroutine.
 
     LDX #LO sprite_x
     LDY #HI sprite_x
@@ -294,10 +295,38 @@ JMP program_begin
 
     RTS
 
+; Read key input and move the player
+.move_player
+    LDY player_x
+
+    LDX #38 ; left arrow
+    LDA keyboard_pos X
+    CMP #00
+    BEQ move_player_after_left_check
+        TYA
+        SEC
+        SBC #1
+        STA player_x
+        .move_player_after_left_check
+
+    LDX #39 ; right arrow
+    LDA keyboard_pos X
+    CMP #00
+    BEQ move_player_after_right_check
+        TYA
+        CLC
+        ADC #1 
+        STA player_x
+        .move_player_after_right_check
+
+    RTS
 
 .program_begin ; PROGRAM STARTS HERE
 
 JSR load_graphics
+
+LDA #$36
+LDY #$06
 JSR clear_tiles
 
 ; Set background color
@@ -314,8 +343,10 @@ JSR clear_tiles
 JSR init_ground
 JSR init_player_sprite
 
-LDA #50
+LDA #128
 STA player_x
+
+LDA #-32
 STA player_y
 
 JSR update_player_sprite
@@ -324,6 +355,12 @@ JSR update_player_sprite
 .program_main_loop
 
     JSR check_for_quit  ; check for quit also gets the keyboard input
+
+    ; keycode 38: left
+    ; keycode 39: right
+
+    JSR move_player
+    JSR update_player_sprite
 
     LDA #100
     STA 0   ; graphics refresh system call
