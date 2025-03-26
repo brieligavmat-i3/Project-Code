@@ -142,6 +142,13 @@ JMP program_begin
     STA 0
     RTS
 
+.syscall_print_mem_page
+    LDA #253
+    STX 1
+    STY 2
+    STA 0
+    RTS
+
 ; Initialize Ground
 ; Subroutine: Uses the data section (.floor_tiles, .floor_attributes) to draw the ground
 .init_ground
@@ -194,7 +201,7 @@ JMP program_begin
     STA player_sprites x
     STY player_atts x
     INX
-    LDY #$50    ; x mirror, transparency
+    LDY #$90    ; x mirror, transparency
     STA player_sprites x
     STY player_atts x
     INX
@@ -204,7 +211,7 @@ JMP program_begin
     STA player_sprites X
     STY player_atts X
     INX
-    LDY #$50    ; x mirror
+    LDY #$90    ; x mirror, transparency
     STA player_sprites X
     STY player_atts X
 
@@ -222,28 +229,68 @@ JMP program_begin
 
     CLC
     LDA player_x
-    SBC #8
+    SBC #7
     STA sprite_x X
     LDA player_y
     CLC
-    SBC #8
+    SBC #7
     STA sprite_y X
     LDA player_sprites X
     STA sprite_tile X
-    LDa player_atts X
+    LDA player_atts X
     STA sprite_att X
 
     CLC
     INX
     LDA player_x
     STA sprite_x x
-    LDA player_y 
-    SBC #8
+    LDA player_y
+    SBC #7
     STA sprite_y x
     LDA player_sprites X
     STA sprite_tile X
-    LDa player_atts X
+    LDA player_atts X
     STA sprite_att X
+
+    CLC
+    INX
+    LDA player_x
+    SBC #7
+    STA sprite_x X
+    LDA player_y
+    CLC
+    STA sprite_y X
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+    CLC
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y
+    STA sprite_y x
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+    LDX #LO sprite_x
+    LDY #HI sprite_x
+    JSR syscall_print_mem_page
+
+    LDX #LO sprite_y
+    LDY #HI sprite_y
+    JSR syscall_print_mem_page
+
+    LDX #LO sprite_tile
+    LDY #HI sprite_tile
+    JSR syscall_print_mem_page
+
+    LDX #LO sprite_att
+    LDY #HI sprite_att
+    JSR syscall_print_mem_page
 
     RTS
 

@@ -21,6 +21,7 @@
 
 // System calls
 #define SYSCALL_QUIT 1
+#define SYSCALL_PRINT_MEM_PAGE 253
 #define SYSCALL_PRINTCPU 255
 #define SYSCALL_PRINTF 254
 
@@ -315,6 +316,11 @@ int kvm_start(int max_cycles) {
 			case SYSCALL_GPU_REFRESH:
 				kvm_gpu_refresh_graphics(mem);
 				break;
+			case SYSCALL_PRINT_MEM_PAGE:
+				{
+					// Print one page of memory starting at the specified address.
+					kvm_memory_print_hexdump(mem, syscall_addr, 256);
+				}break;
 			}
 
 			mem->data[0] = 0;
