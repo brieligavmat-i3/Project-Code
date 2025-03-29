@@ -34,6 +34,7 @@
     <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
     <ClCompile Include="..\vm-backend\kvm_gpu.c" />
+    <ClCompile Include="..\vm-backend\kvm_graphicsloader.c" />
     <ClCompile Include="..\vm-backend\kvm_input.c" />
     <ClCompile Include="..\vm-backend\kvm_memory.c" />
     <ClCompile Include="..\vm-backend\leakcheck.c" />
@@ -45,7 +46,6 @@
     <ClCompile Include="..\vm-backend\test_kvm.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="kvm_graphicsloader.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\imgui-master\backends\imgui_impl_sdl2.h" />
@@ -60,13 +60,13 @@
     <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h" />
     <ClInclude Include="..\vm-backend\kvm_cpu.h" />
     <ClInclude Include="..\vm-backend\kvm_gpu.h" />
+    <ClInclude Include="..\vm-backend\kvm_graphicsloader.h" />
     <ClInclude Include="..\vm-backend\kvm_input.h" />
     <ClInclude Include="..\vm-backend\kvm_memory.h" />
     <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h" />
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
-    <ClInclude Include="kvm_graphicsloader.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

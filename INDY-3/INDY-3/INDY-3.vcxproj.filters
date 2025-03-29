@@ -93,7 +93,7 @@
     <ClCompile Include="..\vm-backend\kvm_input.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
-    <ClCompile Include="kvm_graphicsloader.c">
+    <ClCompile Include="..\vm-backend\kvm_graphicsloader.c">
       <Filter>Source Files\vm</Filter>
     </ClCompile>
   </ItemGroup>
@@ -152,7 +152,7 @@
     <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
-    <ClInclude Include="kvm_graphicsloader.h">
+    <ClInclude Include="..\vm-backend\kvm_graphicsloader.h">
       <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>

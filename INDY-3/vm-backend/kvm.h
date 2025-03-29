@@ -8,9 +8,6 @@
 
 #include <SDL.h>
 
-/*
-So, we have to take in a filename to assemble, then assemble, and run it until it's done.
-*/
 
 // Call this first
 int kvm_init(void);

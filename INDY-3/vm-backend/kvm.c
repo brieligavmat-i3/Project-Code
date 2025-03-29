@@ -14,6 +14,8 @@
 #include "kvm_input.h"
 #include "kvm_gpu.h"
 
+#include "kvm_graphicsloader.h"
+
 #include "kvm_mem_map_constants.h"
 
 // SDL Includes
@@ -248,11 +250,11 @@ int kvm_start(int max_cycles) {
 			}
 			case SYSCALL_LOAD_PALETTES:
 			{
-				char* graphics_fname = malloc(50);
-				load_string(graphics_fname, syscall_addr, 50);
+				char* graphics_fname = malloc(FILENAME_LENGTH);
+				load_string(graphics_fname, syscall_addr, FILENAME_LENGTH);
 
-				int graphics_result = kvm_load_graphics(NULL, graphics_fname);
-				if (graphics_result != 0) {
+				char* binary_fname = load_graphics(graphics_fname, true);
+				if (!binary_fname || load_binary_file_to_memory(binary_fname, VRAM_COLOR_PALETTES) == -1) {
 					printf("Failed to load graphics file %s.\n", graphics_fname);
 					mem->data[1] = 0xFF; // FF for "Freakin' Failure"
 				}
@@ -260,16 +262,17 @@ int kvm_start(int max_cycles) {
 					mem->data[1] = 0x00; // 0 for success.
 				}
 
+				free(binary_fname);
 				free(graphics_fname);
 			}
 			break;
 			case SYSCALL_LOAD_GRAPHICS:
 			{
-				char* graphics_fname = malloc(50);
-				load_string(graphics_fname, syscall_addr, 50);
+				char* graphics_fname = malloc(FILENAME_LENGTH);
+				load_string(graphics_fname, syscall_addr, FILENAME_LENGTH);
 
-				int graphics_result = kvm_load_graphics(graphics_fname, NULL);
-				if (graphics_result != 0) {
+				char* binary_fname = load_graphics(graphics_fname, false);
+				if (!binary_fname || load_binary_file_to_memory(binary_fname, GRAPHICS_ROM_MEM_LOC) == -1) {
 					printf("Failed to load graphics file %s.\n", graphics_fname);
 					mem->data[1] = 0xFF; // FF for "Freakin' Failure"
 				}
@@ -277,6 +280,7 @@ int kvm_start(int max_cycles) {
 					mem->data[1] = 0x00; // 0 for success.
 				}
 
+				free(binary_fname);
 				free(graphics_fname);
 			}
 			break;
