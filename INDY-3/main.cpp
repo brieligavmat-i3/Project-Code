@@ -70,7 +70,7 @@ int main(int argc, char* args[])
 
     bool show_add_window = false;
     bool show_text_input_window = false; // Track if input window is open
-    char input_text[128] = ""; // Buffer for user input
+    char input_text[256] = ""; // Buffer for user input
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
@@ -128,7 +128,8 @@ int main(int argc, char* args[])
                                 printf("Loaded text: %s\n", displayed_text.c_str());
 
                                 // In the UI code, make sure to render displayed_text
-                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
+                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(500, 200));
+
 
 
                                 // Log to see if data is being read
@@ -137,6 +138,19 @@ int main(int argc, char* args[])
                             else
                             {
                                 printf("Error: File is empty or cannot be read\n");
+                            }
+
+                            if (kvm_load_instructions(filename) != 0) {
+                                printf("Error loading instructions into KVM.\n");
+                            }
+                            else
+                            {
+                                // Start the KVM virtual machine
+                                if (kvm_start(-1) != 0) {
+                                    printf("Error starting KVM VM.\n");
+                                    SDL_RWclose(file);
+                                    return -1;
+                                }
                             }
                             SDL_RWclose(file);
                         }
@@ -315,6 +329,8 @@ int main(int argc, char* args[])
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
+    // Quit KVM when exiting
+    kvm_quit();
 
     // Cleanup ImGui
     ImGui_ImplSDLRenderer2_Shutdown();
