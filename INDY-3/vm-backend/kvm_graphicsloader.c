@@ -167,6 +167,10 @@ static int load_kvm_palettes(SDL_Surface* surf, char* bmp_fname, char* bin_fname
 	return 0;
 }
 
+static uint8_t process_four_pixels(uint8_t* pix_array, int start_index) {
+
+}
+
 static int load_kvm_graphics(SDL_Surface* surf, char* bmp_fname, char* bin_fname) {
 	uint8_t bytes[4096];
 
@@ -183,4 +187,6 @@ static int load_kvm_graphics(SDL_Surface* surf, char* bmp_fname, char* bin_fname
 
 	int index = 0;
 	uint8_t* pixels = surf->pixels;
+
+
 }
