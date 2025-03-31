@@ -37,6 +37,9 @@
     <Filter Include="Source Files\Tinyfile">
       <UniqueIdentifier>{77c0597c-dc53-475a-9413-38e64a2bf3df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Script">
+      <UniqueIdentifier>{f578b527-a0b2-4a72-bb13-a8e20b0c9ba0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">
@@ -80,6 +83,18 @@
     </ClCompile>
     <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c">
       <Filter>Source Files\Tinyfile</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_gpu.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\kvm_input.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\vm-backend\test_kvm.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,5 +140,25 @@
     <ClInclude Include="..\libtinyfiledialogs-master\tinyfiledialogs.h">
       <Filter>Header Files\tinyfile</Filter>
     </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_gpu.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_input.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\vm-backend\kvm_mem_map_constants.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assembler.py">
+      <Filter>Script</Filter>
+    </None>
+    <None Include="graphics_loader.py">
+      <Filter>Script</Filter>
+    </None>
   </ItemGroup>
 </Project>

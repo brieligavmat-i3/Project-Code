@@ -70,7 +70,7 @@ int main(int argc, char* args[])
 
     bool show_add_window = false;
     bool show_text_input_window = false; // Track if input window is open
-    char input_text[256] = ""; // Buffer for user input
+    char input_text[128] = ""; // Buffer for user input
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
@@ -128,8 +128,7 @@ int main(int argc, char* args[])
                                 printf("Loaded text: %s\n", displayed_text.c_str());
 
                                 // In the UI code, make sure to render displayed_text
-                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(500, 200));
-
+                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
 
 
                                 // Log to see if data is being read
