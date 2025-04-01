@@ -37,6 +37,9 @@
     <Filter Include="Source Files\Tinyfile">
       <UniqueIdentifier>{77c0597c-dc53-475a-9413-38e64a2bf3df}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Script">
+      <UniqueIdentifier>{f578b527-a0b2-4a72-bb13-a8e20b0c9ba0}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\main.cpp">

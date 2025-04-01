@@ -10,6 +10,10 @@ and may not be redistributed without written permission.*/
 #include "imgui_impl_sdlrenderer2.h"
 #include <vector>
 #include "tinyfiledialogs.h"
+extern "C"
+{
+#include "kvm.h"
+}
 
 // Screen dimension constants
 const int SCREEN_WIDTH = 640;
@@ -49,6 +53,12 @@ int main(int argc, char* args[])
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
+
+    // Initialize KVM
+    if (kvm_init() != 0) {
+        printf("KVM initialization failed.\n");
+        return -1;
+    }
 
     // Setup ImGui SDL2 + SDL_Renderer2 bindings
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
@@ -128,6 +138,19 @@ int main(int argc, char* args[])
                             {
                                 printf("Error: File is empty or cannot be read\n");
                             }
+
+                            if (kvm_load_instructions(filename) != 0) {
+                                printf("Error loading instructions into KVM.\n");
+                            }
+                            else
+                            {
+                                // Start the KVM virtual machine
+                                if (kvm_start(-1) != 0) {
+                                    printf("Error starting KVM VM.\n");
+                                    SDL_RWclose(file);
+                                    return -1;
+                                }
+                            }
                             SDL_RWclose(file);
                         }
                         else
@@ -143,7 +166,6 @@ int main(int argc, char* args[])
                 }
         
         
-
                 if (ImGui::MenuItem("Save")) { /* Handle save action */ }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
                 ImGui::EndMenu();
@@ -306,6 +328,8 @@ int main(int argc, char* args[])
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
+    // Quit KVM when exiting
+    kvm_quit();
 
     // Cleanup ImGui
     ImGui_ImplSDLRenderer2_Shutdown();
