@@ -61,6 +61,8 @@ named_firstpass_addresses = {}
 
 locations_to_replace = {}
 
+# Ignore this value; it was for testing. 
+# It's set by the calling C code to be a different number.
 PROGRAM_COUNTER_ENTRY_POINT = 0x200
 
 implicits_str = 'nop brk rts rti tax tay txa tya tsx txs pha pla php plp sec clc clv'
@@ -69,8 +71,44 @@ implicits_str = implicits_str.split(' ')
 for i, item in enumerate(implicits_str):
     implicits[item] = i
 
+# List legal opcodes for error checking
+# Ranges are inclusive on both ends.
+legal_opcodes_ranges = [
+    (0x00, 0x10),
+    (0x28, 0x2F),
+    (0x40, 0x56),
+    (0x60, 0x76),
+    (0x80, 0x97),
+    (0xA0, 0xAF),
+    (0xB4, 0xBE),
+    (0xC0, 0xC7),
+    (0xD0, 0xD3),
+    (0xD8, 0xDF),
+    (0xE0, 0xF6),
+    (0xF8, 0xFF)
+]
+
+# While looping over the above list, leave out the following opcodes.
+omit_opcodes = [
+    0x49, 0x4B, 
+    0x63, 0x67, 0x69, 0x6B, 0x73,
+    0x83, 0x87, 0x8B, 
+    0xB5, 0xB6, 0xBB
+]
+
+# Loop through the ranges, and assemble a list of all legal opcodes, for error checking.
+legal_opcodes = []
+for pair in legal_opcodes_ranges:
+    for opcode in range(pair[0], pair[1] + 1):
+        if opcode not in omit_opcodes:
+            legal_opcodes.append(opcode)
+
+# Global variables for printing line numbers and contents during error messages.
+glob_current_line:str
+glob_current_line_num:int
+
 def twos_complement_byte(value:int):
-    print(f"twos comp. of {value}")
+    #print(f"twos comp. of {value}")
     return (~value + 1) & 0xff
 
 def get_int(value:str):
@@ -88,8 +126,10 @@ def get_addr(value):
     try:
         num = get_int(value)
     except:
-        num = named_firstpass_addresses[value]
-        #print(hex(named_firstpass_addresses[value]))
+        num = named_firstpass_addresses.get(value)
+
+        if num == None:
+            pass#print_error_and_exit(f"Variable '{value}' is not defined.")
     
     if num < 0:
         num = abs(num)
@@ -102,7 +142,7 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
     elif type(value) is int:
         num = value
     else:
-        print("Error with add_numeric, type is not int or string")
+        print_error_and_exit("Type is not 'int' or 'string'.")
         exit(-1)
 
     if verify_16_bit:
@@ -121,10 +161,10 @@ def add_numeric_value(value, verify_16_bit=False, verify_8_bit=False):
                 # If the number is bigger than a byte, add the numbers a byte at a time.
                 working_bytes.append(num & 0xFF)
                 num >>= 8
-            
-                #print(value, num, bytes)
 
 def check_int16_or_str(value, type:str):
+    global glob_current_line_num
+
     num = 0
     is_addr = False
     try:
@@ -132,9 +172,14 @@ def check_int16_or_str(value, type:str):
     except:
         num = 0
         is_addr = True
-        locations_to_replace[len(working_bytes)] = (value, type)
+        locations_to_replace[len(working_bytes)] = (value, type, glob_current_line_num)
     return num, is_addr
 
+# Print the line number and the code that caused the error, along with the error message.
+def print_error_and_exit(error_msg:str):
+    global glob_current_line_num, glob_current_line
+    print(f"Error on line {glob_current_line_num+1}: '{glob_current_line.strip(' \t\n')}'\n{error_msg}\n")
+    exit(-1)
 
 def process_line(line:str):
     # Delete any commented out section
@@ -151,9 +196,10 @@ def process_line(line:str):
     if stripped_line[0] == '.':
         split_line = stripped_line.split(' ')
         if len(split_line) == 1:
+            # Add an address at a given point in the ROM
             named_addresses[stripped_line[1:].strip(' \t\n')] = len(working_bytes) + PROGRAM_COUNTER_ENTRY_POINT
-            #print(named_addresses)
         else:
+            # Name a specific address (name a variable and assign it a memory cell)
             named_firstpass_addresses[split_line[0][1:].strip(' \t\n')] = get_int(split_line[1])
         return
     
@@ -182,8 +228,7 @@ def process_line(line:str):
             case 'ror':
                 current_opcode = 0x2F
             case _:
-                print('Error:', instr, "is not an implicit opcode.")
-                exit(-1)
+                print_error_and_exit(f"'{instr}' is not an implicit opcode.")
         working_bytes.append(current_opcode)
         return
     elif instr == 'dat':
@@ -246,8 +291,7 @@ def process_line(line:str):
                         addr_mode = Instr_addr_mode.INDIRECT_INDEX_Y
                     case _:
                         # error
-                        print("Error with indirect instruction, no register of that name.")
-                        exit(-1)
+                        print_error_and_exit(f"No register of name '{split_rh[1].lower()}'. Did you mean 'x' or 'y'?")
         else:
             value = split_line[1]
             if value[0] == '#':
@@ -267,8 +311,7 @@ def process_line(line:str):
                         
                     else:
                         # error
-                        print("Error, immediate value too large (must be between 0 and 255 or 0x0 and 0xFF)")
-                        exit(-1) 
+                        print_error_and_exit(f"Immediate value {num} is too large; must fit in 8 bits.\nValid range is 0 - 255 (decimal) or $00 - $FF (hex).")
                 current_number = num
                 
             else:
@@ -287,8 +330,7 @@ def process_line(line:str):
                             addr_mode = Instr_addr_mode.ZPY
                         else:
                             # error
-                            print("Error, that register does not exist.")
-                            exit(-1)
+                            print_error_and_exit(f"No register of name '{split_line[2].lower()}'. Did you mean 'x' or 'y'?")
                 elif 256 <= current_number <= 0xFFFF or is_named_addr:
                     instr_size = 3
 
@@ -302,12 +344,10 @@ def process_line(line:str):
                             addr_mode = Instr_addr_mode.ABY
                         else:
                             # error
-                            print("Error, that register does not exist. abs")
-                            exit(-1)
+                            print_error_and_exit(f"No register of name '{split_line[2].lower()}'. Did you mean 'x' or 'y'?")
                 else:
                     # error
-                    print("Error, number too large")
-                    exit(-1)
+                    print_error_and_exit(f"Number {current_number} is too large.")
 
 
         
@@ -470,23 +510,36 @@ def process_line(line:str):
                 case _:
                     print("No normal instruction", instr)
                     exit(-1)
-                
+        
+        if current_opcode not in legal_opcodes:
+            print_error_and_exit(f"Illegal opcode: '{hex(current_opcode)}'.")
+
         # apply everything
         working_bytes.append(current_opcode)
         add_numeric_value(current_number, instr_size==3 or is_named_addr, instr_size==2 and not is_named_addr)
 
-    #print(stripped_line, addr_mode)
 
 
 
 def assemble_file(filename:str):
+    global glob_current_line, glob_current_line_num
+    raw_file_list = [] # A bit hacky but this exposes the file strings for error checking in second pass.
+
     with open(filename, mode='r') as file:
-        for line in file:
+        for i, line in enumerate(file):
+            raw_file_list.append(line)
+            glob_current_line = line
+            glob_current_line_num = i
             process_line(line)
 
         for key in locations_to_replace:
             v = locations_to_replace[key]
-            addr = named_addresses[v[0]]
+            addr = named_addresses.get(v[0])
+            if addr == None:
+                glob_current_line_num = key
+                glob_current_line = raw_file_list[v[2]]
+                print_error_and_exit(f"Address/Variable '{v[0]}' is not defined.")
+
             match v[1]:
                 case 'all':
                     #print(locations_to_replace[key], named_addresses)
@@ -514,8 +567,6 @@ else:
     PROGRAM_COUNTER_ENTRY_POINT = int(argv[2])
 
 assemble_file("tests/"+filename)
-#print(named_addresses)
-#print(locations_to_replace)
 
 immut_bytes = bytes(working_bytes)
 with open(f"outs/{filename.split('.')[0]}.kvmbin", mode='wb') as file:
