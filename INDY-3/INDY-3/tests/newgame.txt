@@ -4,7 +4,6 @@
         .keyboard_pos $7C00
         .mouse_pos $7D00
     
-
     ;   VRAM memory locations
         .bgcolor_pos $8000
         .palette_pos $8003
@@ -38,6 +37,10 @@
     .player_y $151
     .player_sprites $152 ; contains the four tiles of the player sprite
     .player_atts $156    ; contains the attributes for said tiles
+
+    .player_bullet_x $15A ; There can only be one player bullet on the screen.
+    .player_bullet_y $15B
+    .?player_bullet_active $15C ; boolean for whether or not bullet is active
 
 ; Jump to code start point. This call skips all of the subroutines defined after
 JMP program_begin
@@ -142,6 +145,7 @@ JMP program_begin
     STA 0
     RTS
 
+; Call the print memory page syscall. Uses x for low and y for high byte of the starting address.
 .syscall_print_mem_page
     LDA #253
     STX 1
@@ -321,6 +325,77 @@ JMP program_begin
 
     RTS
 
+.update_player_bullet_bspeed
+dat $6
+
+; Update the position and sprite of player bullet
+.update_player_bullet
+
+    ; What we want to do: decrease bullet y position to move it up the screen. When it reaches the top, move it to the player position.
+    ; How to do it? 
+    
+    ; Check if active
+    ; if not, check if z pressed
+    ;   if z pressed, activate bullet, set its position to player position
+    ; if so, 
+        ; increase y position
+        ; if carry clear (subtraction underflow), deactivate bullet
+        ; else:
+    ; If active,
+        ; Set sprite x to bullet x - 4
+        ; Set sprite y to bullet y - 4
+    ; otherwise, set sprite x to -1
+
+    LDA ?player_bullet_active
+    CMP #00
+    BEQ update_player_bullet_branch_inactive
+        ; stuff to do if it's active
+        SEC
+        LDA player_bullet_y
+        SBC update_player_bullet_bspeed     ; subtract the bullet speed from the bullet y position
+        STA player_bullet_y
+
+        ; if there was no subtraction overflow (underflow), skip this code.
+        BCS update_player_bullet_no_overflow
+            ; go to player
+            ;LDA player_x
+            ;STA player_bullet_x
+            ;LDA player_y
+            ;SEC
+            ;SBC #8
+            ;STA player_bullet_y
+
+            LDA #0
+            STA ?player_bullet_active ; update the 'active' boolean
+
+            LDX player_bullet_sprite_index
+            LDA #-1
+            STA sprite_x X
+            RTS
+        .update_player_bullet_after_tp
+
+        ; update the sprite
+        LDX player_bullet_sprite_index
+
+        SEC
+        LDA player_bullet_x
+        SBC #4
+        STA sprite_x X
+
+        SEC 
+        LDA player_bullet_y
+        SBC #4
+        STA sprite_y X
+        RTS
+
+    .update_player_bullet_branch_inactive
+
+    ; Check for Z key
+    LDA #35 ; z keycode
+    
+
+    RTS
+
 .program_begin ; PROGRAM STARTS HERE
 
 JSR load_graphics
@@ -343,13 +418,49 @@ JSR clear_tiles
 JSR init_ground
 JSR init_player_sprite
 
+; Initialize bullet sprite
+LDX player_bullet_sprite_index
+LDA player_bullet_tile ; bullet tile
+STA sprite_tile x
+
+LDA player_bullet_att ; bullet attributes- palette 4 (red/orange)
+STA sprite_att X
+
+; Initialize player's position
 LDA #128
 STA player_x
 
 LDA #-32
 STA player_y
 
+; initialize bullet position
+;LDA #$FA
+LDA #8
+STA player_bullet_x
+STA player_bullet_y
+
+LDA player_bullet_x
+STA sprite_x x
+STA sprite_y x
+
 JSR update_player_sprite
+
+; Print sprite memory pages
+    LDX #lo sprite_x
+    LDY #hi sprite_x
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_y
+    LDY #hi sprite_y
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_tile
+    LDY #hi sprite_tile
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_att
+    LDY #hi sprite_att
+    JSR syscall_print_mem_page
 
 ; Main loop
 .program_main_loop
@@ -358,9 +469,11 @@ JSR update_player_sprite
 
     ; keycode 38: left
     ; keycode 39: right
+    ; keycode 35: z
 
     JSR move_player
     JSR update_player_sprite
+    JSR update_player_bullet
 
     LDA #100
     STA 0   ; graphics refresh system call
@@ -394,3 +507,12 @@ INC 0 ; quit
     .floor_attributes
     dat $A3 ; flip vertical and mirror, use palette 3
     dat $03 ; no mirroring, use palette 3
+
+    ; sprite indexes
+    .player_bullet_sprite_index
+    dat $4 ; bullet is the fourth sprite
+
+    .player_bullet_tile
+    dat $32
+    .player_bullet_att
+    dat $14 ; palette 4, use transparency
