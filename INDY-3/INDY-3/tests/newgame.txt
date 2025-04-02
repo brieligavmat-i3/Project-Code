@@ -302,17 +302,22 @@ JMP program_begin
 
     RTS
 
+.move_player_speed
+dat $02
+.move_player_subspeed
+dat $0
 ; Read key input and move the player
 .move_player
-    LDY player_x
-
     LDX #38 ; left arrow
     LDA keyboard_pos X
     CMP #00
     BEQ move_player_after_left_check
-        TYA
         SEC
-        SBC #1
+        LDA player_subx
+        SBC move_player_subspeed
+        STA player_subx
+        LDA player_x
+        SBC move_player_speed
         STA player_x
         .move_player_after_left_check
 
@@ -320,9 +325,12 @@ JMP program_begin
     LDA keyboard_pos X
     CMP #00
     BEQ move_player_after_right_check
-        TYA
         CLC
-        ADC #1 
+        LDA player_subx
+        ADC move_player_subspeed
+        STA player_subx
+        LDA player_x
+        ADC move_player_speed 
         STA player_x
         .move_player_after_right_check
 
@@ -339,8 +347,7 @@ dat $6
     LDX player_bullet_sprite_index
     LDA #-1
     STA sprite_x X
-RTS
-
+    RTS
 
 ; Update the position and sprite of player bullet
 .update_player_bullet
@@ -416,7 +423,11 @@ RTS
 
     RTS
 
+;===============================================================================================
+;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 .program_begin ; PROGRAM STARTS HERE
+;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+;===============================================================================================
 
 JSR load_graphics
 
