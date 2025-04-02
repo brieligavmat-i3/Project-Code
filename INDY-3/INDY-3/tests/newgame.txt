@@ -48,6 +48,8 @@
 ; Jump to code start point. This call skips all of the subroutines defined after
 JMP program_begin
 
+.rng_start  ; idk if I'll use this. If I do it'll be using a page of code as an RNG lookup table.
+
 ; Clear Titles
 ; Subroutine: sets all values in the tile map to the value of the accumulator, and the attributes to the value of Y
 .clear_tiles
@@ -190,6 +192,26 @@ JMP program_begin
         INX
         DEC counter
     BNE init_ground_pt2
+
+    RTS
+
+; Initialize Blocks
+; Fills in some shield blocks.
+.init_blocks
+    LDA block_tile          ; value to clear the tile with
+    LDY block_attributes    ; value to clear the attribute with
+
+    ; put blocks in the third page
+    LDX #128
+    .init_blocks_lp
+        STA tile_map_p3 x
+        STY tile_att_p3 x
+        INX
+    BNE init_blocks_lp
+
+    LDX #lo tile_map_p3
+    LDY #hi tile_map_p3
+    JSR syscall_print_mem_page
 
     RTS
 
@@ -423,6 +445,49 @@ dat $6
 
     RTS
 
+; Subroutine: Test bullet collision on the rocks.
+; If collision is true, destroy the rock and deactivate the bullet.
+    
+    ; Ball tile: E4
+    ; how to check tile collision?
+
+    ; take bullet x coord, y coord
+    ; divide each by 8
+    ; test the tile at that coordinate
+    ; if it's not $FF, make it $FF and deactivate bullet
+    
+    ; Variables:
+    .test_bullet_collision_xdiv
+    dat $0
+    .test_bullet_collision_ydiv
+    dat $0
+
+    ; Test the player's bullet colliding against the blocks.
+    .test_bullet_collision
+        LDA ?player_bullet_active
+        CMP #00
+        BEQ #1
+            RTS ; end the subroutine if the bullet is inactive
+        
+        LDX player_bullet_x
+        LDY player_bullet_y
+
+        STX test_bullet_collision_xdiv
+        STY test_bullet_collision_ydiv
+
+        LDX #3
+        .test_bullet_collision_loop
+            SHR test_bullet_collision_xdiv
+            SHR test_bullet_collision_ydiv ; shift each right 3 times to divide by 8.
+
+            DEX
+            BNE test_bullet_collision_loop
+        
+        
+        
+        RTS
+
+
 ;===============================================================================================
 ;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 .program_begin ; PROGRAM STARTS HERE
@@ -431,23 +496,27 @@ dat $6
 
 JSR load_graphics
 
-LDA #$36
-LDY #$06
+;LDA #$36
+;LDY #$06
+LDA #$FF
+LDY #0
 JSR clear_tiles
 
 ; Set background color
     LDX #0
-    LDA #49
+    LDA #32
     STA bgcolor_pos X
     INX
-    LDA #47
+    LDA #92
     STA bgcolor_pos X
     INX
-    LDA #53
+    LDA #153
     STA bgcolor_pos X
 
 JSR init_ground
 JSR init_player_sprite
+
+JSR init_blocks
 
 ; Initialize bullet sprite
 LDX player_bullet_sprite_index
@@ -464,7 +533,7 @@ STA player_x
 LDA #-32
 STA player_y
 
-; initialize bullet position to an invalid coord
+; initialize bullet position to an invalid coord so it is hidden by default
 LDA #-1
 STA player_bullet_x
 STA player_bullet_y
@@ -548,3 +617,10 @@ INC 0 ; quit
     dat $32
     .player_bullet_att
     dat $14 ; palette 4, use transparency
+
+    .block_tile
+    dat $E4
+    .block_attributes
+    dat $10 $18 $17
+
+
