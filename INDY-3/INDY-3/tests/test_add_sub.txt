@@ -1,0 +1,55 @@
+.addresult $10 ; second row of zero page
+.subresult $20 ; third row
+
+LDX #0
+
+; test addition
+CLC
+LDA num1 x
+ADC num2 x
+STA addresult x
+INX
+LDA num1 x
+ADC num2 x
+STA addresult x
+
+LDX #1
+
+; test subtraction
+SEC
+LDA num1 x
+SBC num2 x
+STA subresult X
+DEX
+LDA num1 x
+SBC num2 x
+STA subresult X
+
+INC 0
+
+.num1
+dat $10FF
+
+.num2
+dat $10FF
+
+;addition: $21FE
+;subtraction: $0
+
+
+
+
+
+
+
+
+
+.num10
+dat $0A50
+
+.num20
+dat $0100
+
+; <results should be>
+; addition:     $0B50 ($50 $0B in mem)
+; subtraction:  $0950 ($50 $09)

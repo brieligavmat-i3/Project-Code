@@ -313,12 +313,12 @@ dat $0
     CMP #00
     BEQ move_player_after_left_check
         SEC
-        LDA player_subx
-        SBC move_player_subspeed
-        STA player_subx
         LDA player_x
         SBC move_player_speed
         STA player_x
+        LDA player_subx
+        SBC move_player_subspeed
+        STA player_subx
         .move_player_after_left_check
 
     LDX #39 ; right arrow
