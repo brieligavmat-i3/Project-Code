@@ -33,14 +33,17 @@
         .sprite_att $8F00
 
 ; Game memory locations
-    .player_x $150
-    .player_y $151
-    .player_sprites $152 ; contains the four tiles of the player sprite
-    .player_atts $156    ; contains the attributes for said tiles
+    ; note to self, don't use page 01 for game variables >_< (that's the stack)
+    .player_x $250
+    .player_subx $251
+    .player_y $252
 
-    .player_bullet_x $15A ; There can only be one player bullet on the screen.
-    .player_bullet_y $15B
-    .?player_bullet_active $15C ; boolean for whether or not bullet is active
+    .player_sprites $260 ; contains the four tiles of the player sprite
+    .player_atts $264    ; contains the attributes for said tiles
+
+    .player_bullet_x $268 ; There can only be one player bullet on the screen.
+    .player_bullet_y $269
+    .?player_bullet_active $26A ; boolean for whether or not bullet is active
 
 ; Jump to code start point. This call skips all of the subroutines defined after
 JMP program_begin
@@ -328,6 +331,17 @@ JMP program_begin
 .update_player_bullet_bspeed
 dat $6
 
+; subroutine to deactivate player bullet and hide its sprite.
+.deactivate_player_bullet
+    LDA #0
+    STA ?player_bullet_active ; update the 'active' boolean
+
+    LDX player_bullet_sprite_index
+    LDA #-1
+    STA sprite_x X
+RTS
+
+
 ; Update the position and sprite of player bullet
 .update_player_bullet
 
@@ -357,22 +371,14 @@ dat $6
 
         ; if there was no subtraction overflow (underflow), skip this code.
         BCS update_player_bullet_no_overflow
-            ; go to player
-            ;LDA player_x
-            ;STA player_bullet_x
-            ;LDA player_y
-            ;SEC
-            ;SBC #8
-            ;STA player_bullet_y
 
-            LDA #0
-            STA ?player_bullet_active ; update the 'active' boolean
+            ;LDX #0
+            ;LDY #2
+            ;JSR syscall_print_mem_page
 
-            LDX player_bullet_sprite_index
-            LDA #-1
-            STA sprite_x X
+            JSR deactivate_player_bullet
             RTS
-        .update_player_bullet_after_tp
+        .update_player_bullet_no_overflow
 
         ; update the sprite
         LDX player_bullet_sprite_index
@@ -387,12 +393,26 @@ dat $6
         SBC #4
         STA sprite_y X
         RTS
-
     .update_player_bullet_branch_inactive
 
     ; Check for Z key
-    LDA #35 ; z keycode
+    LDX #35 ; z keycode
+    LDA keyboard_pos x
+    CMP #0 
+    BEQ update_player_bullet_after_zcheck
+        ; if you're not pressing z, this will be skipped
+        LDA #1
+        STA ?player_bullet_active ;activate the bullet
+
+        ; go to player's position
+        LDA player_x
+        STA player_bullet_x
+        LDA player_y
+        ;SEC
+        ;SBC #8
+        STA player_bullet_y
     
+    .update_player_bullet_after_zcheck
 
     RTS
 
@@ -433,9 +453,8 @@ STA player_x
 LDA #-32
 STA player_y
 
-; initialize bullet position
-;LDA #$FA
-LDA #8
+; initialize bullet position to an invalid coord
+LDA #-1
 STA player_bullet_x
 STA player_bullet_y
 
@@ -446,6 +465,7 @@ STA sprite_y x
 JSR update_player_sprite
 
 ; Print sprite memory pages
+    jmp jfkjdksjflksdjfkldsjkfld
     LDX #lo sprite_x
     LDY #hi sprite_x
     JSR syscall_print_mem_page
@@ -461,6 +481,7 @@ JSR update_player_sprite
     LDX #lo sprite_att
     LDY #hi sprite_att
     JSR syscall_print_mem_page
+    .jfkjdksjflksdjfkldsjkfld
 
 ; Main loop
 .program_main_loop
