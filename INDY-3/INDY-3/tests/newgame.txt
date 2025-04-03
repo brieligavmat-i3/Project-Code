@@ -45,6 +45,13 @@
     .player_bullet_y $269
     .?player_bullet_active $26A ; boolean for whether or not bullet is active
 
+    .invader_sprites $300 ; same as player sprites but for the invader
+    .invader_atts $304
+
+    .invader_data $400 ; contains the data for the invaders. 4 bytes each, 128 bytes total
+    .invader_speed $480
+    .invader_count $481
+
 ; Jump to code start point. This call skips all of the subroutines defined after
 JMP program_begin
 
@@ -265,6 +272,37 @@ JMP program_begin
 
     RTS
 
+; Initialize enemy sprite
+; Subroutine: loads the correct sprite tiles/attributes for the enemy invaders.
+.init_invader_sprite
+    ; Sprite 0: top left
+    ; Sprite 1: top right
+    ; Sprite 2: bottom left
+    ; Sprite 3: bottom right
+
+    LDX #0
+    LDA #$33    ; upper invader
+    LDY #$19    ; transparency, palette 9
+
+    STA invader_sprites x
+    STY invader_atts x
+    INX
+    LDY #$99    ; x mirror, transparency
+    STA invader_sprites x
+    STY invader_atts x
+    INX
+
+    LDA #$34    ; lower invader
+    LDY #$19        
+    STA invader_sprites X
+    STY invader_atts X
+    INX
+    LDY #$99    ; x mirror, transparency
+    STA invader_sprites X
+    STY invader_atts X
+
+    RTS
+
 ; Update player sprite
 ; Subroutine: Updates the first four sprites in the sprite tables, which are the four parts of the player tank.
 .update_player_sprite
@@ -343,10 +381,70 @@ JMP program_begin
 
     RTS
 
+; Same as update player sprite but for the invader.
+.update_invader_sprite
+    ; Sprite 0: top left, x: -8 y: -8
+    ; Sprite 1: top right, x: 0 y: -8
+    ; Sprite 2: bottom left, x: -8 y: 0
+    ; Sprite 3: bottom right, x: 0 y: 0
+
+    LDX #0 ; first sprite
+
+    LDY #0 ; first element of invader data is x position
+
+    SEC     ; riiiight, for subtraction, you have to set the carry flag before starting an operation.
+            ; I am not 100% sure why this is but that's how the 6502 worked so I'm trusting the designers of that knew what they were doing.
+    LDA player_x
+    SBC #8
+    STA sprite_x X
+    LDA player_y
+    SEC
+    SBC #8
+    STA sprite_y X
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+    SEC
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y
+    SBC #8
+    STA sprite_y x
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+    SEC
+    INX
+    LDA player_x
+    SBC #8
+    STA sprite_x X
+    LDA player_y
+    STA sprite_y X
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y
+    STA sprite_y x
+    LDA player_sprites X
+    STA sprite_tile X
+    LDA player_atts X
+    STA sprite_att X
+
+; Total player speed, about 2.5 ppf
 .move_player_speed
 dat $02
 .move_player_subspeed
-dat $0
+dat $80
 ; Read key input and move the player
 .move_player
     LDX #38 ; left arrow
@@ -354,12 +452,12 @@ dat $0
     CMP #00
     BEQ move_player_after_left_check
         SEC
-        LDA player_x
-        SBC move_player_speed
-        STA player_x
         LDA player_subx
         SBC move_player_subspeed
         STA player_subx
+        LDA player_x
+        SBC move_player_speed
+        STA player_x
         .move_player_after_left_check
 
     LDX #39 ; right arrow
@@ -628,6 +726,7 @@ JSR clear_tiles
 
 JSR init_ground
 JSR init_player_sprite
+JSR init_invader_sprite
 
 JSR init_blocks
 

@@ -1,0 +1,128 @@
+NOT EXECUTABLE
+
+sprites
+0 player
+1 player
+2 player
+3 player
+4 bullet
+
+5 invader 
+6 invader
+7 invader
+8 invader
+...
+
+
+How to do space invaders?
+
+vars:
+invader x, y, speed, direction (0 - 2, left, down, right)
+speed can be global
+
+one byte for x and y for each invader
+
+so an invader would be like:
+
+struct invader
+    x:byte
+    y:byte
+    dir: 0 - 3 (right, downright, left, downleft)
+    alive: 0 - 1 (perhaps merge these two)
+    distance_to_go (when going down, how much longer to travel?): byte
+
+global var speed (all invaders move at same speed)
+global var invader_count = 32 //decreases when you kill one
+
+
+so, 32 invaders (4 rows of 8).
+increase speed at 16, 8, 4, 2, and 1 invaders
+
+need subroutines for:
+-update invaders
+-render invaders
+-test invader collisions (with player bullet)
+-kill invader
+
+Let's start with one invader, but allocate the memory anyway.
+4 bytes * 32 invaders = 128 bytes
+2 bytes for global invader vars
+130 bytes total
+
+update_invader
+    if dir = left
+        x -= speed
+        if x < 20
+            dir = downright
+            distance = 32
+    elif dir = right
+        x += speed
+        if x > 236
+            dir = downleft
+            distance = 32
+    elif dir = downleft
+        y += speed
+        distance -= speed
+        if distance <= 0
+            dir = left
+    elif dir = downright
+        y += speed
+        distance -= speed
+        if distance <= 0
+            dir = right
+
+    if y > ground_level
+        signal game over
+
+
+
+
+render_invader
+    (same as render tank) 
+
+test_invader_collision
+    bulletx, bullety
+
+    if bulletx > x -8 && bulletx < x + 8
+    if bullety > y -8 && bullety < y + 8
+        kill_invader
+        delete_bullet
+
+How to test comparisons in assembly?
+
+CMP will set carry flag if accumulator >= argument
+
+    First two checks:
+    subtract 8 from x and Y
+    Store in temp_var
+
+    LDA invader_x
+    SEC, SBC #8
+    STA temp_var
+    LDA bulletx
+    CMP temp_var
+    BCC no_collision
+
+    LDA invader_y
+    SEC, SBC #8
+    STA temp_var
+    LDA bullety
+    CMP temp_var
+    BCC no_collision
+
+    Second two checks:
+    LDA invader_x
+    CLC, ADC #8
+    CMP bulletx
+    BCC no_collision
+
+    LDA invader_y
+    CLC, ADC #8
+    CMP bullety
+    BCC no_collision
+
+    kill_invader
+    delete_bullet
+
+    .no_collision
+    RTS
