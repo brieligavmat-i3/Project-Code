@@ -50,6 +50,25 @@ JMP program_begin
 
 .rng_start  ; idk if I'll use this. If I do it'll be using a page of code as an RNG lookup table.
 
+; Print sprite memory pages
+.print_sprite_mem
+    LDX #lo sprite_x
+    LDY #hi sprite_x
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_y
+    LDY #hi sprite_y
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_tile
+    LDY #hi sprite_tile
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_att
+    LDY #hi sprite_att
+    JSR syscall_print_mem_page
+    RTS
+
 ; Clear Titles
 ; Subroutine: sets all values in the tile map to the value of the accumulator, and the attributes to the value of Y
 .clear_tiles
@@ -437,15 +456,15 @@ dat $6
         LDA player_x
         STA player_bullet_x
         LDA player_y
-        ;SEC
-        ;SBC #8
+        SEC
+        SBC #8
         STA player_bullet_y
     
     .update_player_bullet_after_zcheck
 
     RTS
 
-; Subroutine: Test bullet collision on the rocks.
+; Subroutines: Test bullet collision on the rocks.
 ; If collision is true, destroy the rock and deactivate the bullet.
     
     ; Variables:
@@ -475,22 +494,27 @@ dat $6
         dat $0 $0
 
     ; subroutine to take x and y registers as tile coords, and put the page and offset in tile_page
-    .test_bullet_collision_get_tile_value
+    .tbc_get_tile_value
         ; (tile_y * 32) + tile_x = tile value
 
         STX tbc_tile_x
         STY tbc_tile_y
 
+        LDY #0
+        LDX #1
+        STY tbc_tile_page X
+
+        LDY tbc_tile_y
         STY tbc_tile_page ; divide tile y by 8 and put it in tile_page
         SHR tbc_tile_page
         SHR tbc_tile_page
         SHR tbc_tile_page
 
         LDY #5  ; multiply by 32
-        .test_bullet_collision_get_tile_value_loop
+        .tbc_get_tile_value_loop
             SHL tbc_tile_y
             DEY
-            BNE test_bullet_collision_get_tile_value_loop 
+            BNE tbc_get_tile_value_loop 
         
         ; Add up to get proper tile offset
         LDX #1
@@ -523,17 +547,17 @@ dat $6
         STX tbc_xdiv
         STY tbc_ydiv
 
-        LDX #3
-        .test_bullet_collision_loop
-            SHR tbc_xdiv
-            SHR tbc_ydiv ; shift each right 3 times to divide by 8.
+        SHR tbc_xdiv
+        SHR tbc_xdiv
+        SHR tbc_xdiv
 
-            DEX
-            BNE test_bullet_collision_loop
+        SHR tbc_ydiv
+        SHR tbc_ydiv
+        SHR tbc_ydiv
         
         LDX tbc_xdiv
         LDY tbc_ydiv
-        JSR test_bullet_collision_get_tile_value
+        JSR tbc_get_tile_value
 
         ; Set up indirection for tile
             LDA #hi tile_map_p1
@@ -569,27 +593,11 @@ dat $6
         ; Deactivate the bullet
             JSR deactivate_player_bullet
 
-        ; Check for first palette
-        ;LDX #1
-        ;LDY tbc_tile_page x
-        ;LDA (tbc_proper_att_address) Y ; get the tile.
-        ;TAX
-        ;CMP #$10 ; 
-
-        ; printf syscall
-        LDX #lo tbc_printf_target
-        LDY #hi tbc_printf_target
-        STX $1
-        STY $2
-        LDA #254
-        STA $0
-
-
         ; remove the tile
         LDX #1
         LDA #$FF
         LDY tbc_tile_page x
-        STA (tbc_proper_tile_address) Y ; get the tile.
+        STA (tbc_proper_tile_address) Y ; set the tile.
         RTS
 
 
@@ -649,24 +657,7 @@ STA sprite_y x
 
 JSR update_player_sprite
 
-; Print sprite memory pages
-    jmp jfkjdksjflksdjfkldsjkfld
-    LDX #lo sprite_x
-    LDY #hi sprite_x
-    JSR syscall_print_mem_page
-
-    LDX #lo sprite_y
-    LDY #hi sprite_y
-    JSR syscall_print_mem_page
-
-    LDX #lo sprite_tile
-    LDY #hi sprite_tile
-    JSR syscall_print_mem_page
-
-    LDX #lo sprite_att
-    LDY #hi sprite_att
-    JSR syscall_print_mem_page
-    .jfkjdksjflksdjfkldsjkfld
+JSR print_sprite_mem 
 
 ; Main loop
 .program_main_loop
@@ -728,6 +719,6 @@ INC 0 ; quit
     .block_tile
     dat $E4
     .block_attributes
-    dat $10 $18 $17
+    dat $13
 
 
