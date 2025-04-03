@@ -236,7 +236,7 @@ int kvm_start(int max_cycles) {
 				char* print_string = malloc(256);
 				uint16_t str_end_pt = load_string(print_string, syscall_addr, 256);
 				uint8_t bytes_to_print = kvm_memory_get_byte(mem, str_end_pt);
-				printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
+				//printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
 				printf("%s ", print_string);
 
 				for (int i = 0; i < bytes_to_print; i++) {

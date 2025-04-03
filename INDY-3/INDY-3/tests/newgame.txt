@@ -448,6 +448,60 @@ dat $6
 ; Subroutine: Test bullet collision on the rocks.
 ; If collision is true, destroy the rock and deactivate the bullet.
     
+    ; Variables:
+        .tbc_xdiv
+        dat $0
+        .tbc_ydiv
+        dat $0
+
+        .tbc_printf_target
+        dat "page, offset, value: "
+        dat $0 $3
+
+        .tbc_tile_page ; which page the testing tile is on.
+        dat $0 $0
+        .tbc_tile_value
+        dat $0
+
+        .tbc_tile_x
+        dat $0
+        .tbc_tile_y
+        dat $0
+
+        .tbc_proper_tile_address
+        dat $0 $0
+
+        .tbc_proper_att_address
+        dat $0 $0
+
+    ; subroutine to take x and y registers as tile coords, and put the page and offset in tile_page
+    .test_bullet_collision_get_tile_value
+        ; (tile_y * 32) + tile_x = tile value
+
+        STX tbc_tile_x
+        STY tbc_tile_y
+
+        STY tbc_tile_page ; divide tile y by 8 and put it in tile_page
+        SHR tbc_tile_page
+        SHR tbc_tile_page
+        SHR tbc_tile_page
+
+        LDY #5  ; multiply by 32
+        .test_bullet_collision_get_tile_value_loop
+            SHL tbc_tile_y
+            DEY
+            BNE test_bullet_collision_get_tile_value_loop 
+        
+        ; Add up to get proper tile offset
+        LDX #1
+        CLC
+        LDA tbc_tile_page x
+        ADC tbc_tile_x
+        ADC tbc_tile_y
+        STA tbc_tile_page x
+
+        RTS
+
     ; Ball tile: E4
     ; how to check tile collision?
 
@@ -455,36 +509,87 @@ dat $6
     ; divide each by 8
     ; test the tile at that coordinate
     ; if it's not $FF, make it $FF and deactivate bullet
-    
-    ; Variables:
-    .test_bullet_collision_xdiv
-    dat $0
-    .test_bullet_collision_ydiv
-    dat $0
 
     ; Test the player's bullet colliding against the blocks.
     .test_bullet_collision
         LDA ?player_bullet_active
         CMP #00
-        BEQ #1
+        BNE #1
             RTS ; end the subroutine if the bullet is inactive
         
         LDX player_bullet_x
         LDY player_bullet_y
 
-        STX test_bullet_collision_xdiv
-        STY test_bullet_collision_ydiv
+        STX tbc_xdiv
+        STY tbc_ydiv
 
         LDX #3
         .test_bullet_collision_loop
-            SHR test_bullet_collision_xdiv
-            SHR test_bullet_collision_ydiv ; shift each right 3 times to divide by 8.
+            SHR tbc_xdiv
+            SHR tbc_ydiv ; shift each right 3 times to divide by 8.
 
             DEX
             BNE test_bullet_collision_loop
         
+        LDX tbc_xdiv
+        LDY tbc_ydiv
+        JSR test_bullet_collision_get_tile_value
+
+        ; Set up indirection for tile
+            LDA #hi tile_map_p1
+            LDX #1
+            STA tbc_proper_tile_address x
+            LDA tbc_tile_page
+            CLC 
+            ADC tbc_proper_tile_address x
+            STA tbc_proper_tile_address x
+
+            LDA #lo tile_map_p1
+            STA tbc_proper_tile_address
         
+        LDX #1
+        LDY tbc_tile_page x
+        LDA (tbc_proper_tile_address) Y ; get the tile.
+        CMP #$FF
+        BNE #1   ; If the tile's blank, skip the rest of the subroutine
+            RTS
+
+        ; Set up indirection for attribute
+            LDA #hi tile_att_p1
+            LDX #1
+            STA tbc_proper_att_address x
+            LDA tbc_tile_page
+            CLC 
+            ADC tbc_proper_att_address x
+            STA tbc_proper_att_address x
+
+            LDA #lo tile_att_p1
+            STA tbc_proper_att_address
         
+        ; Deactivate the bullet
+            JSR deactivate_player_bullet
+
+        ; Check for first palette
+        ;LDX #1
+        ;LDY tbc_tile_page x
+        ;LDA (tbc_proper_att_address) Y ; get the tile.
+        ;TAX
+        ;CMP #$10 ; 
+
+        ; printf syscall
+        LDX #lo tbc_printf_target
+        LDY #hi tbc_printf_target
+        STX $1
+        STY $2
+        LDA #254
+        STA $0
+
+
+        ; remove the tile
+        LDX #1
+        LDA #$FF
+        LDY tbc_tile_page x
+        STA (tbc_proper_tile_address) Y ; get the tile.
         RTS
 
 
@@ -575,6 +680,8 @@ JSR update_player_sprite
     JSR move_player
     JSR update_player_sprite
     JSR update_player_bullet
+
+    JSR test_bullet_collision
 
     LDA #100
     STA 0   ; graphics refresh system call
