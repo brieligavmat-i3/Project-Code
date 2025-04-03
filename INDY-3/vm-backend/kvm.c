@@ -225,6 +225,7 @@ static uint16_t load_string(char* str, uint16_t start_location, uint16_t max_len
 int kvm_start(int max_cycles) {
 	if (!cpu || !mem) return -1;
 
+
 	// Cpu cycle until system calls happen.
 	size_t cycle_count = 0;
 

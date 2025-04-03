@@ -83,7 +83,7 @@ int main(int argc, char* args[])
         while (SDL_PollEvent(&e))
         {
             ImGui_ImplSDL2_ProcessEvent(&e);
-            if (e.type == SDL_QUIT) quit = true;
+            if (e.type == SDL_QUIT) { quit = true; }
         }
 
         // Start ImGui frame
@@ -144,6 +144,7 @@ int main(int argc, char* args[])
                             }
                             else
                             {
+
                                 // Start the KVM virtual machine
                                 if (kvm_start(-1) != 0) {
                                     printf("Error starting KVM VM.\n");
@@ -203,12 +204,7 @@ int main(int argc, char* args[])
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::Text("Code Panel");
-        // Big "Add" button in the top-left 
-        if (ImGui::Button("Add", ImVec2(115, 50))) // Button position
-        {
-            show_add_window = true;
-        }
-        
+                
         if (ImGui::Button("Undo", ImVec2(115, 30))) // Undo button
         {
             if (!history.empty())
@@ -225,8 +221,7 @@ int main(int argc, char* args[])
             }
         }
 
-
-        ImGui::EndChild();
+         ImGui::EndChild();
         ImGui::NextColumn(); // Move to Right Box
 
         // Right Box (Large, Fully Expanding)
@@ -236,15 +231,17 @@ int main(int argc, char* args[])
         ImGui::Text("Code Block");
         ImGui::Separator();
 
-
-
-        // Display section for generated code
-        
+              
         // Creates a scrollable box to display the generated code
         ImGui::BeginChild("CodePreview", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
 
+        // Ensure the text buffer is large enough for user input
+        if (displayed_text.size() <= 1) {
+            displayed_text.resize(256);
+        }
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(500, 200)); 
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(500, 200), ImGuiInputTextFlags_AllowTabInput);
+        
 
         ImGui::EndChild();
 
@@ -253,72 +250,7 @@ int main(int argc, char* args[])
         ImGui::Columns(1); // Exit column mode
         ImGui::End();
 
-        // "Add" button pop-up window
-        if (show_add_window)
-        {
-            ImGui::Begin("Add", &show_add_window, ImGuiWindowFlags_AlwaysAutoResize);
-
-            ImGui::Text("Select Instruction:");
-
-            // Capture which button was clicked and set preset_name
-            if (ImGui::Button("NOP")) { temp_preset_name = "NOP"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 2")) { temp_preset_name = "Preset 2"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 3")) { temp_preset_name = "Preset 3"; show_text_input_window = true; }
-
-
-            if (ImGui::Button("Close")) {
-                show_add_window = false;
-            }
-
-            ImGui::End();
-        }
-
-        // Show input window when the button is clicked
-        if (show_text_input_window)
-        {
-            // Create a window with title, when x is clicked closes
-            ImGui::Begin("Enter Input", &show_text_input_window, ImGuiWindowFlags_AlwaysAutoResize);
-
-            // Show input prompt
-            ImGui::Text("Enter your Input: ");
-            // Input box, input_text to store text
-            ImGui::InputText("##input", input_text, IM_ARRAYSIZE(input_text));
-
-            //Submit button
-            if (ImGui::Button("Submit"))
-            {
-                if (!temp_preset_name.empty()) // Ensure preset is selected
-                {
-                    std::string new_entry = temp_preset_name + " " + input_text;
-
-                    history.push_back(new_entry); // Store entry in history 
-
-                    if (displayed_text.empty())
-                    {
-                        displayed_text = new_entry; // First entry, no newline
-                    }
-                    else
-                    {
-                        displayed_text.append("\n").append(new_entry); // Append with newline only after the first entry
-                    }
-
-                    temp_preset_name.clear();  // Reset preset
-                    input_text[0] = '\0';   // Clear input text
-
-                    show_add_window = false; 
-                }
-                show_text_input_window = false;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel"))
-            {
-                show_text_input_window = false;
-            }
-
-            ImGui::End();
-        }
-
+        
         // Rendering
         ImGui::Render();
         ImGui::EndFrame();
@@ -330,6 +262,7 @@ int main(int argc, char* args[])
     }
     // Quit KVM when exiting
     kvm_quit();
+  
 
     // Cleanup ImGui
     ImGui_ImplSDLRenderer2_Shutdown();
