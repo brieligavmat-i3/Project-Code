@@ -75,7 +75,7 @@ int main(int argc, char* args[])
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
     std::vector<std::string> history; // Stores each entry separately
-
+    std::string filename;
     
     while (!quit)
     {
@@ -99,73 +99,52 @@ int main(int argc, char* args[])
             {
                 if (ImGui::MenuItem("Open"))
                 {
-                    const char* filter[] = { "*.txt" };
-                    const char* filename = tinyfd_openFileDialog("Open File", "", 1, filter, "Text Files", 0);
+                    const char* filter[] = { "*.txt" };  // File filter
+                    const char* file = tinyfd_openFileDialog("Open File", "", 1, filter, "Text Files", 0);
 
-                    if (filename)
+                    if (file)
                     {
-                        SDL_RWops* file = SDL_RWFromFile(filename, "r");
-                        if (file)
+                        filename = file;  // Assign the file path to the filename variable
+                        SDL_RWops* file_handle = SDL_RWFromFile(filename.c_str(), "r");
+                        if (file_handle)
                         {
-                            displayed_text.clear(); // Clear existing text
-
-                            Sint64 file_size = SDL_RWsize(file);
+                            displayed_text.clear();
+                            Sint64 file_size = SDL_RWsize(file_handle);
                             if (file_size > 0)
                             {
                                 static char buffer[4096] = "";
-
                                 std::vector<char> temp_buffer(file_size + 1, '\0');
-                                SDL_RWread(file, temp_buffer.data(), 1, file_size);
+                                SDL_RWread(file_handle, temp_buffer.data(), 1, file_size);
 
-                                // Now copy the contents to the buffer
                                 strncpy_s(buffer, sizeof(buffer), temp_buffer.data(), _TRUNCATE);
                                 buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
 
-                                // Update displayed_text
-                                displayed_text = buffer; // Use the buffer directly for simplicity
-
-                                // Log the loaded text
+                                displayed_text = buffer;
                                 printf("Loaded text: %s\n", displayed_text.c_str());
-
-                                // In the UI code, make sure to render displayed_text
                                 ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
 
-
-                                // Log to see if data is being read
-                                printf("File successfully loaded: %s\n", filename);
+                                // Load instructions into KVM
+                                if (kvm_load_instructions(filename.c_str()) != 0)  // Use .c_str() to pass filename to KVM
+                                {
+                                    printf("Error loading instructions into KVM.\n");
+                                }
+                                else
+                                {
+                                    printf("Instructions loaded successfully.\n");
+                                }
                             }
                             else
                             {
                                 printf("Error: File is empty or cannot be read\n");
                             }
-
-                            if (kvm_load_instructions(filename) != 0) {
-                                printf("Error loading instructions into KVM.\n");
-                            }
-                            else
-                            {
-
-                                // Start the KVM virtual machine
-                                if (kvm_start(-1) != 0) {
-                                    printf("Error starting KVM VM.\n");
-                                    SDL_RWclose(file);
-                                    return -1;
-                                }
-                            }
-                            SDL_RWclose(file);
+                            SDL_RWclose(file_handle);
                         }
                         else
                         {
                             printf("Failed to open file: %s\n", SDL_GetError());
                         }
                     }
-                    else
-                    {
-                        printf("Failed to select file or user canceled the dialog.\n");
-                    }
-
                 }
-        
         
                 if (ImGui::MenuItem("Save")) { /* Handle save action */ }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
@@ -220,6 +199,32 @@ int main(int argc, char* args[])
                 }
             }
         }
+
+        if (ImGui::Button("Execute", ImVec2(115, 30)))
+        {
+            if (!filename.empty())  // Ensure filename is not empty
+            {
+                printf("Executing file: %s\n", filename.c_str());  // Use .c_str() for printf
+
+                // Attempt to load instructions into KVM and start the VM
+                if (kvm_load_instructions(filename.c_str()) != 0)
+                {
+                    printf("Error loading instructions into KVM.\n");
+                }
+                else
+                {
+                    if (kvm_start(-1) != 0)
+                    {
+                        printf("Error starting KVM VM.\n");
+                    }
+                }
+            }
+            else
+            {
+                printf("No file selected to execute.\n");
+            }
+        }
+
 
          ImGui::EndChild();
         ImGui::NextColumn(); // Move to Right Box
