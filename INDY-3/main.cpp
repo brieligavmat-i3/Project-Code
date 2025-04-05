@@ -112,19 +112,19 @@ int main(int argc, char* args[])
                             Sint64 file_size = SDL_RWsize(file_handle);
                             if (file_size > 0)
                             {
-                                static char buffer[4096] = "";
-                                std::vector<char> temp_buffer(file_size + 1, '\0');
-                                SDL_RWread(file_handle, temp_buffer.data(), 1, file_size);
+                                // Resize the displayed_text buffer to fit the file content
+                                displayed_text.resize(file_size);
+                                SDL_RWread(file_handle, &displayed_text[0], 1, file_size);
 
-                                strncpy_s(buffer, sizeof(buffer), temp_buffer.data(), _TRUNCATE);
-                                buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
+                                // Ensure the string is null-terminated
+                                displayed_text.push_back('\0');  // Append null-terminator at the end
 
-                                displayed_text = buffer;
                                 printf("Loaded text: %s\n", displayed_text.c_str());
-                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
+                                // Pass the buffer to ImGui ensuring the length does not include the null terminator
+                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(-FLT_MIN, 200), ImGuiInputTextFlags_AllowTabInput);
 
                                 // Load instructions into KVM
-                                if (kvm_load_instructions(filename.c_str()) != 0)  // Use .c_str() to pass filename to KVM
+                                if (kvm_load_instructions(filename.c_str()) != 0)
                                 {
                                     printf("Error loading instructions into KVM.\n");
                                 }
@@ -143,6 +143,7 @@ int main(int argc, char* args[])
                         {
                             printf("Failed to open file: %s\n", SDL_GetError());
                         }
+
                     }
                 }
         
@@ -238,7 +239,7 @@ int main(int argc, char* args[])
 
               
         // Creates a scrollable box to display the generated code
-        ImGui::BeginChild("CodePreview", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("CodePreview", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Ensure the text buffer is large enough for user input
         if (displayed_text.size() <= 1) {
