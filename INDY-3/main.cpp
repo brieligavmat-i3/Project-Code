@@ -246,7 +246,7 @@ int main(int argc, char* args[])
             displayed_text.resize(256);
         }
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(500, 200), ImGuiInputTextFlags_AllowTabInput);
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(800, 200), ImGuiInputTextFlags_AllowTabInput);
         
 
         ImGui::EndChild();
