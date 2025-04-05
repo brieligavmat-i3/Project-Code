@@ -128,16 +128,6 @@ int main(int argc, char* args[])
 
                                 // Set the flag to indicate that the code was loaded from a file
                                 is_code_loaded_from_file = true;
-
-                                // Load instructions into KVM
-                                if (kvm_load_instructions(filename.c_str()) != 0)
-                                {
-                                    printf("Error loading instructions into KVM.\n");
-                                }
-                                else
-                                {
-                                    printf("Instructions loaded successfully.\n");
-                                }
                             }
                             else
                             {
@@ -220,10 +210,6 @@ int main(int argc, char* args[])
             }
         }
 
-
-       
-
-
         if (ImGui::Button("Execute", ImVec2(115, 30)))
         {
             if (!filename.empty())  // Case 1: A file is selected
@@ -263,8 +249,8 @@ int main(int argc, char* args[])
                     }
                 }
 
-                // Set the temporary file name as "temp_code.asm"
-                const std::string temp_filename = "temp_code.asm";  // No .txt extension
+                // Set the temporary file name as "temp_code"
+                const std::string temp_filename = "temp_code";  // No .txt extension
                 SDL_RWops* file_handle = SDL_RWFromFile(temp_filename.c_str(), "w");
 
                 if (file_handle)
@@ -276,19 +262,24 @@ int main(int argc, char* args[])
 
                     printf("Temporary file created: %s\n", temp_filename.c_str());
 
+                    // Initialize KVM
+                    if (kvm_init() != 0) {
+                        printf("KVM initialization failed.\n");
+                        return -1;
+                    }
+
                     // Now load the temporary file into KVM
                     if (kvm_load_instructions(temp_filename.c_str()) != 0)
                     {
                         printf("Error loading instructions into KVM.\n");
+                        return -1;
                     }
-                    else
+                    if (kvm_start(-1) != 0)
                     {
-                        if (kvm_start(-1) != 0)
-                        {
-                            printf("Error starting KVM VM.\n");
-                        }
+                        printf("Error starting KVM VM.\n");
+                        return -1;
                     }
-
+                    kvm_quit(); 
                 }
                 else
                 {
