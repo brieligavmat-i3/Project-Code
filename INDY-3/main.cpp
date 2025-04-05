@@ -15,6 +15,9 @@ extern "C"
 #include "kvm.h"
 }
 
+extern std::vector<std::string> history;
+
+
 // Screen dimension constants
 const int SCREEN_WIDTH = 640;
 const int SCREEN_HEIGHT = 480;
@@ -74,8 +77,10 @@ int main(int argc, char* args[])
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
-    std::vector<std::string> history; // Stores each entry separately
+   
     std::string filename;
+    std::vector<std::string> history;
+    bool is_code_loaded_from_file = false;
     
     while (!quit)
     {
@@ -120,8 +125,15 @@ int main(int argc, char* args[])
                                 displayed_text.push_back('\0');  // Append null-terminator at the end
 
                                 printf("Loaded text: %s\n", displayed_text.c_str());
+
                                 // Pass the buffer to ImGui ensuring the length does not include the null terminator
                                 ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(-FLT_MIN, 200), ImGuiInputTextFlags_AllowTabInput);
+
+                                // Store the loaded file content in history
+                                history.push_back(displayed_text);
+
+                                // Set the flag to indicate that the code was loaded from a file
+                                is_code_loaded_from_file = true;
 
                                 // Load instructions into KVM
                                 if (kvm_load_instructions(filename.c_str()) != 0)
@@ -143,8 +155,8 @@ int main(int argc, char* args[])
                         {
                             printf("Failed to open file: %s\n", SDL_GetError());
                         }
-
                     }
+
                 }
         
                 if (ImGui::MenuItem("Save")) { /* Handle save action */ }
@@ -189,23 +201,44 @@ int main(int argc, char* args[])
         {
             if (!history.empty())
             {
-                history.pop_back(); // Remove the last added input
+                // Remove the last added input from history
+                history.pop_back();
 
                 // Rebuild displayed_text from history
                 displayed_text.clear();
-                for (size_t i = 0; i < history.size(); ++i)
+                if (!history.empty())
                 {
-                    if (i > 0) displayed_text.append("\n");
-                    displayed_text.append(history[i]);
+                    displayed_text = history.back();  // Set displayed_text to the last state in history
                 }
+                else
+                {
+                    displayed_text.clear();  // If no history, clear the text
+                }
+
+                // Reset filename (clear if it was linked to an invalid file)
+                filename.clear();
+
+                // If the code was loaded from a file, reset flag
+                if (is_code_loaded_from_file)
+                {
+                    is_code_loaded_from_file = false;
+                }
+
+                // Ensure the KVM state is reset after undo
+                kvm_quit();
+                kvm_init();
             }
         }
 
+
+       
+
+
         if (ImGui::Button("Execute", ImVec2(115, 30)))
         {
-            if (!filename.empty())  // Ensure filename is not empty
+            if (!filename.empty())  // Case 1: A file is selected
             {
-                printf("Executing file: %s\n", filename.c_str());  // Use .c_str() for printf
+                printf("Executing file: %s\n", filename.c_str());
 
                 // Attempt to load instructions into KVM and start the VM
                 if (kvm_load_instructions(filename.c_str()) != 0)
@@ -214,18 +247,63 @@ int main(int argc, char* args[])
                 }
                 else
                 {
-                    if (kvm_start(-1) != 0)
+                    if (kvm_start(-1) != 0) 
                     {
                         printf("Error starting KVM VM.\n");
                     }
                 }
             }
+            else if (!displayed_text.empty())  // Case 2: User typed code in the code block
+            {
+                printf("Executing typed code:\n%s\n", displayed_text.c_str());
+
+                // Sanitize the displayed text: Remove any non-printable characters or null bytes
+                std::string sanitized_text;
+                for (char c : displayed_text)
+                {
+                    if (isprint(c))  // Only include printable characters
+                    {
+                        sanitized_text += c;
+                    }
+                }
+
+                // Set the temporary file name as "temp_code.asm"
+                const std::string temp_filename = "temp_code.asm";  // No .txt extension
+                SDL_RWops* file_handle = SDL_RWFromFile(temp_filename.c_str(), "w");
+
+                if (file_handle)
+                {
+                    // Write the sanitized code to the file
+                    Sint64 file_size = sanitized_text.size();
+                    SDL_RWwrite(file_handle, sanitized_text.c_str(), 1, file_size);
+                    SDL_RWclose(file_handle);
+
+                    printf("Temporary file created: %s\n", temp_filename.c_str());
+
+                    // Now load the temporary file into KVM
+                    if (kvm_load_instructions(temp_filename.c_str()) != 0)
+                    {
+                        printf("Error loading instructions into KVM.\n");
+                    }
+                    else
+                    {
+                        if (kvm_start(-1) != 0)
+                        {
+                            printf("Error starting KVM VM.\n");
+                        }
+                    }
+
+                }
+                else
+                {
+                    printf("Error creating temporary file: %s\n", temp_filename.c_str());
+                }
+            }
             else
             {
-                printf("No file selected to execute.\n");
+                printf("No code to execute.\n");
             }
         }
-
 
          ImGui::EndChild();
         ImGui::NextColumn(); // Move to Right Box
@@ -263,6 +341,7 @@ int main(int argc, char* args[])
 
         SDL_SetRenderDrawColor(renderer, 51, 51, 51, 255);
         SDL_RenderClear(renderer);
+
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
