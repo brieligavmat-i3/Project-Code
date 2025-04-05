@@ -341,10 +341,7 @@ int main(int argc, char* args[])
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
-    // Quit KVM when exiting
-    kvm_quit();
   
-
     // Cleanup ImGui
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();
