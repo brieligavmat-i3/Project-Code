@@ -57,12 +57,6 @@ int main(int argc, char* args[])
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
 
-    // Initialize KVM
-    if (kvm_init() != 0) {
-        printf("KVM initialization failed.\n");
-        return -1;
-    }
-
     // Setup ImGui SDL2 + SDL_Renderer2 bindings
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
@@ -223,10 +217,6 @@ int main(int argc, char* args[])
                 {
                     is_code_loaded_from_file = false;
                 }
-
-                // Ensure the KVM state is reset after undo
-                kvm_quit();
-                kvm_init();
             }
         }
 
@@ -240,18 +230,24 @@ int main(int argc, char* args[])
             {
                 printf("Executing file: %s\n", filename.c_str());
 
+                // Initialize KVM
+                if (kvm_init() != 0) {
+                    printf("KVM initialization failed.\n");
+                    return -1;
+                }
+
                 // Attempt to load instructions into KVM and start the VM
                 if (kvm_load_instructions(filename.c_str()) != 0)
                 {
                     printf("Error loading instructions into KVM.\n");
+                    return -1;
                 }
-                else
+                if (kvm_start(-1) != 0) 
                 {
-                    if (kvm_start(-1) != 0) 
-                    {
-                        printf("Error starting KVM VM.\n");
-                    }
+                    printf("Error starting KVM VM.\n");
                 }
+                kvm_quit();
+           
             }
             else if (!displayed_text.empty())  // Case 2: User typed code in the code block
             {
