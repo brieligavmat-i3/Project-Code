@@ -243,21 +243,21 @@ int main(int argc, char* args[])
                 std::string sanitized_text;
                 for (char c : displayed_text)
                 {
-                    if (isprint(c))  // Only include printable characters
+                    if (isprint(c) || c == '\n' || c == '\t')  // Only include printable characters
                     {
                         sanitized_text += c;
                     }
                 }
 
                 // Set the temporary file name as "temp_code"
-                const std::string temp_filename = "temp_code";  // No .txt extension
-                SDL_RWops* file_handle = SDL_RWFromFile(temp_filename.c_str(), "w");
+                std::string temp_filename = "temp_code";  // No .txt extension
+                SDL_RWops* file_handle = SDL_RWFromFile((temp_filename+".txt").c_str(), "w");
 
                 if (file_handle)
                 {
                     // Write the sanitized code to the file
                     Sint64 file_size = sanitized_text.size();
-                    SDL_RWwrite(file_handle, sanitized_text.c_str(), 1, file_size);
+                    SDL_RWwrite(file_handle, (sanitized_text).c_str(), 1, file_size);
                     SDL_RWclose(file_handle);
 
                     printf("Temporary file created: %s\n", temp_filename.c_str());

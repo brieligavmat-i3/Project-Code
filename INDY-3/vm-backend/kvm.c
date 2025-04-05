@@ -74,7 +74,7 @@ static size_t file_get_size(FILE* file) {
 static int load_binary_file_to_memory(const char* filename, size_t offset) {
 	FILE* code_file = fopen(filename, "rb"); // open the file to read bytes
 	if (!code_file) {
-		printf("Error opening binary file.\n");
+		printf("Error opening binary file %s.\n", filename);
 		return -1;
 	}
 
