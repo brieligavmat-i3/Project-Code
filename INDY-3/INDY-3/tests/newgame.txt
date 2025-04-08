@@ -270,6 +270,17 @@ JMP program_begin
     STA player_sprites X
     STY player_atts X
 
+    ; Initialize the sprite table
+    LDX #3
+    .init_player_sprite_loophead
+        LDA player_sprites X
+        STA sprite_tile X
+        LDA player_atts X
+        STA sprite_att X
+        DEX
+        CPX #$FF
+        BNE init_player_sprite_loophead
+
     RTS
 
 ; Initialize enemy sprite
@@ -301,6 +312,51 @@ JMP program_begin
     STA invader_sprites X
     STY invader_atts X
 
+    ; Initialize the sprite table for the invaders
+    LDY #6
+    .init_invader_sprite_outerloop
+        LDX #0
+        .init_invader_sprite_loophead
+            LDA invader_sprites X
+            STA sprite_tile Y
+            LDA invader_atts X
+            STA sprite_att y
+            INX
+            INY
+            CPX #4
+            BNE init_invader_sprite_loophead
+        CPY #133
+        BCC init_invader_sprite_outerloop
+    RTS
+
+; Place the invaders at the correct screen coordinates
+.init_invader_data_temp
+dat 0
+.init_invader_data
+    LDA #16
+    STA cur_invader_x
+    STA cur_invader_y
+
+    LDX #0
+    .init_invader_data_outerloop
+        LDA cur_invader_x
+        STA init_invader_data_temp
+
+        .init_invader_data_innerloop
+
+
+
+            INX
+
+            INC cur_invader_x
+            LDA cur_invader_x
+            CMP #9
+        BCC init_invader_data_innerloop
+
+        INC cur_invader_y
+        LDA cur_invader_y
+        CMP #5
+    BCC init_invader_data_outerloop
     RTS
 
 ; Update player sprite
@@ -322,10 +378,6 @@ JMP program_begin
     SEC
     SBC #8
     STA sprite_y X
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
 
     SEC
     INX
@@ -334,10 +386,6 @@ JMP program_begin
     LDA player_y
     SBC #8
     STA sprite_y x
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
 
     SEC
     INX
@@ -346,99 +394,88 @@ JMP program_begin
     STA sprite_x X
     LDA player_y
     STA sprite_y X
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
 
     INX
     LDA player_x
     STA sprite_x x
     LDA player_y
     STA sprite_y x
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
-
-    RTS ; 'comment out' the rest of the subroutine.
-
-    LDX #LO sprite_x
-    LDY #HI sprite_x
-    JSR syscall_print_mem_page
-
-    LDX #LO sprite_y
-    LDY #HI sprite_y
-    JSR syscall_print_mem_page
-
-    LDX #LO sprite_tile
-    LDY #HI sprite_tile
-    JSR syscall_print_mem_page
-
-    LDX #LO sprite_att
-    LDY #HI sprite_att
-    JSR syscall_print_mem_page
 
     RTS
 
 ; Same as update player sprite but for the invader.
+    .cur_invader_x
+    dat 0
+    .cur_invader_y
+    dat 0
+    .cur_invader
+    dat 0
 .update_invader_sprite
     ; Sprite 0: top left, x: -8 y: -8
     ; Sprite 1: top right, x: 0 y: -8
     ; Sprite 2: bottom left, x: -8 y: 0
     ; Sprite 3: bottom right, x: 0 y: 0
 
-    LDX #0 ; first sprite
+    LDA #0
+    STA cur_invader
+    .update_invader_sprite_outerloop
 
-    LDY #0 ; first element of invader data is x position
+        LDY cur_invader
+        TYA
+        SHL
+        SHL ; multiply by 4
+        TAY ; store current invader pointer in y register
 
-    SEC     ; riiiight, for subtraction, you have to set the carry flag before starting an operation.
-            ; I am not 100% sure why this is but that's how the 6502 worked so I'm trusting the designers of that knew what they were doing.
-    LDA player_x
-    SBC #8
-    STA sprite_x X
-    LDA player_y
-    SEC
-    SBC #8
-    STA sprite_y X
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
+        LDX cur_invader
+        TXA
+        SHL
+        SHL ; multiply by 4
+        CLC
+        ADC #6 ; apply sprite offset
+        TAX
 
-    SEC
-    INX
-    LDA player_x
-    STA sprite_x x
-    LDA player_y
-    SBC #8
-    STA sprite_y x
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
+        LDA invader_data y
+        STA cur_invader_x
+        INY
+        LDA invader_data Y
+        STA cur_invader_y
 
-    SEC
-    INX
-    LDA player_x
-    SBC #8
-    STA sprite_x X
-    LDA player_y
-    STA sprite_y X
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
+        SEC
+        LDA cur_invader_x
+        SBC #8
+        STA sprite_x X
+        LDA cur_invader_y
+        SEC
+        SBC #8
+        STA sprite_y X
 
-    INX
-    LDA player_x
-    STA sprite_x x
-    LDA player_y
-    STA sprite_y x
-    LDA player_sprites X
-    STA sprite_tile X
-    LDA player_atts X
-    STA sprite_att X
+        SEC
+        INX
+        LDA cur_invader_x
+        STA sprite_x x
+        LDA cur_invader_y
+        SBC #8
+        STA sprite_y x
+
+        SEC
+        INX
+        LDA cur_invader_x
+        SBC #8
+        STA sprite_x X
+        LDA cur_invader_y
+        STA sprite_y X
+
+        INX
+        LDA cur_invader_x
+        STA sprite_x x
+        LDA cur_invader_y
+        STA sprite_y x
+
+        INC cur_invader
+        LDA #33
+        CMP cur_invader
+        BCC update_invader_sprite_outerloop
+    RTS
 
 ; Total player speed, about 2.5 ppf
 .move_player_speed
@@ -730,6 +767,12 @@ JSR init_invader_sprite
 
 JSR init_blocks
 
+LDX #0
+LDA #16
+STA invader_data X
+INX
+STA invader_data X
+
 ; Initialize bullet sprite
 LDX player_bullet_sprite_index
 LDA player_bullet_tile ; bullet tile
@@ -755,6 +798,7 @@ STA sprite_x x
 STA sprite_y x
 
 JSR update_player_sprite
+JSR update_invader_sprite
 
 JSR print_sprite_mem 
 
