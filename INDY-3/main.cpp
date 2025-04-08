@@ -212,30 +212,31 @@ int main(int argc, char* args[])
 
         if (ImGui::Button("Execute", ImVec2(115, 30)))
         {
-            if (!filename.empty())  // Case 1: A file is selected
-            {
-                printf("Executing file: %s\n", filename.c_str());
+            //if (!filename.empty())  // Case 1: A file is selected
+            //{
+            //    printf("Executing file: %s\n", filename.c_str());
 
-                // Initialize KVM
-                if (kvm_init() != 0) {
-                    printf("KVM initialization failed.\n");
-                    return -1;
-                }
+            //    // Initialize KVM
+            //    if (kvm_init() != 0) {
+            //        printf("KVM initialization failed.\n");
+            //        return -1;
+            //    }
 
-                // Attempt to load instructions into KVM and start the VM
-                if (kvm_load_instructions(filename.c_str()) != 0)
-                {
-                    printf("Error loading instructions into KVM.\n");
-                    return -1;
-                }
-                if (kvm_start(-1) != 0) 
-                {
-                    printf("Error starting KVM VM.\n");
-                }
-                kvm_quit();
+            //    // Attempt to load instructions into KVM and start the VM
+            //    if (kvm_load_instructions(filename.c_str()) != 0)
+            //    {
+            //        printf("Error loading instructions into KVM.\n");
+            //        return -1;
+            //    }
+            //    if (kvm_start(-1) != 0) 
+            //    {
+            //        printf("Error starting KVM VM.\n");
+            //    }
+            //    kvm_quit();
            
-            }
-            else if (!displayed_text.empty())  // Case 2: User typed code in the code block
+            //}
+            //else 
+            if (!displayed_text.empty())  // Case 2: User typed code in the code block
             {
                 printf("Executing typed code:\n%s\n", displayed_text.c_str());
 
