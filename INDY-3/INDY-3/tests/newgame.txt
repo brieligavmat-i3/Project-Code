@@ -330,53 +330,57 @@ JMP program_begin
     RTS
 
 ; Place the invaders at the correct screen coordinates
-.init_invader_data_temp
-dat 0
+    .iid_i
+    dat 4
+    .iid_j
+    dat 8
+    .iid_xp
+    dat 16
+    .iid_yp
+    dat 16
 
-.inv_counter $10
+    .inv_count $10
 .init_invader_data
-    LDA #1
-    STA cur_invader_x
-    STA cur_invader_y
-
     LDX #0
-    .init_invader_data_outerloop
-        LDA cur_invader_x
-        STA init_invader_data_temp
 
-        SHL init_invader_data_temp
-        SHL init_invader_data_temp
-        SHL init_invader_data_temp
-        SHL init_invader_data_temp
+    LDA #16
+    STA iid_yp
 
-        .init_invader_data_innerloop
+    .iid_iloop
+        LDA #8
+        STA iid_j ; reset inner loop
+        LDA #16
+        STA iid_xp
 
-            LDA init_invader_data_temp
-            STA invader_data X
-
-            INX
-            LDA cur_invader_y
-            SHR
-            SHR
-            SHR
+        .iid_jloop
+            LDA iid_xp
             STA invader_data x
             INX
+            LDA iid_yp
+            STA invader_data x
             INX
-            INC inv_counter
+            
+            INX ; setup isAlive and direction and stuff here.
             INX
 
+            CLC
+            LDA iid_xp
             ADC #32
-            STA init_invader_data_temp
+            STA iid_xp
 
-            INC cur_invader_x
-            LDA cur_invader_x
-            CMP #10
-        BCC init_invader_data_innerloop
+            INC inv_count
 
-        INC cur_invader_y
-        LDA cur_invader_y
-        CMP #6
-    BCC init_invader_data_outerloop
+        DEC iid_j
+        BNE iid_jloop
+
+        LDA iid_yp
+        CLC
+        ADC #20
+        STA iid_yp
+    
+    DEC iid_i
+    BNE iid_iloop
+
 
     LDX #low invader_data
     LDY #high invader_data
@@ -498,7 +502,7 @@ dat 0
 
         INC cur_invader
         LDA cur_invader
-        CMP #33
+        CMP #32
         BCC update_invader_sprite_outerloop
     RTS
 
@@ -791,12 +795,6 @@ JSR init_player_sprite
 JSR init_invader_sprite
 
 JSR init_blocks
-
-LDX #0
-LDA #16
-STA invader_data X
-INX
-STA invader_data X
 
 JSR init_invader_data
 
