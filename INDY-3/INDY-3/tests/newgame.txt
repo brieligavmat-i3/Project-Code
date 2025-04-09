@@ -332,8 +332,10 @@ JMP program_begin
 ; Place the invaders at the correct screen coordinates
 .init_invader_data_temp
 dat 0
+
+.inv_counter $10
 .init_invader_data
-    LDA #16
+    LDA #1
     STA cur_invader_x
     STA cur_invader_y
 
@@ -342,21 +344,44 @@ dat 0
         LDA cur_invader_x
         STA init_invader_data_temp
 
+        SHL init_invader_data_temp
+        SHL init_invader_data_temp
+        SHL init_invader_data_temp
+        SHL init_invader_data_temp
+
         .init_invader_data_innerloop
 
-
+            LDA init_invader_data_temp
+            STA invader_data X
 
             INX
+            LDA cur_invader_y
+            SHR
+            SHR
+            SHR
+            STA invader_data x
+            INX
+            INX
+            INC inv_counter
+            INX
+
+            ADC #32
+            STA init_invader_data_temp
 
             INC cur_invader_x
             LDA cur_invader_x
-            CMP #9
+            CMP #10
         BCC init_invader_data_innerloop
 
         INC cur_invader_y
         LDA cur_invader_y
-        CMP #5
+        CMP #6
     BCC init_invader_data_outerloop
+
+    LDX #low invader_data
+    LDY #high invader_data
+
+    JSR syscall_print_mem_page
     RTS
 
 ; Update player sprite
@@ -472,8 +497,8 @@ dat 0
         STA sprite_y x
 
         INC cur_invader
-        LDA #33
-        CMP cur_invader
+        LDA cur_invader
+        CMP #33
         BCC update_invader_sprite_outerloop
     RTS
 
@@ -773,6 +798,8 @@ STA invader_data X
 INX
 STA invader_data X
 
+JSR init_invader_data
+
 ; Initialize bullet sprite
 LDX player_bullet_sprite_index
 LDA player_bullet_tile ; bullet tile
@@ -800,7 +827,7 @@ STA sprite_y x
 JSR update_player_sprite
 JSR update_invader_sprite
 
-JSR print_sprite_mem 
+;JSR print_sprite_mem 
 
 ; Main loop
 .program_main_loop
@@ -825,7 +852,6 @@ JSR print_sprite_mem
     JSR delay_millis
 
     JMP program_main_loop
-
 
 .end_program
 INC 0 ; quit
