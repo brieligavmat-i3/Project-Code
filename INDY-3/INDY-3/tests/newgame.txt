@@ -299,22 +299,22 @@ JMP program_begin
 
     LDX #0
     LDA #$33    ; upper invader
-    LDY #$19    ; transparency, palette 9
+    LDY #$17    ; transparency, palette 7
 
     STA invader_sprites x
     STY invader_atts x
     INX
-    LDY #$99    ; x mirror, transparency
+    LDY #$97    ; x mirror, transparency
     STA invader_sprites x
     STY invader_atts x
     INX
 
     LDA #$34    ; lower invader
-    LDY #$19        
+    LDY #$17        
     STA invader_sprites X
     STY invader_atts X
     INX
-    LDY #$99    ; x mirror, transparency
+    LDY #$97    ; x mirror, transparency
     STA invader_sprites X
     STY invader_atts X
 
@@ -1173,7 +1173,7 @@ INC 0 ; quit
     dat 0   ; null terminator, as it's not added automatically by the assembler (possible future todo)
 
     .palette_file
-    dat "exp"
+    dat "invaderspalette"
     dat 0
 
     ; Information about the floor tiles.
