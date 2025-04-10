@@ -49,6 +49,11 @@
     .invader_atts $304
 
     .invader_data $400 ; contains the data for the invaders. 4 bytes each, 128 bytes total
+        ; Invader data is set up like so:
+        ; 0: x position
+        ; 1: y position
+        ; 2: distance to travel downwards
+        ; 3: bit 7: isAlive? low 2 bits: direction (right, left, downright, downleft)
     .invader_speed $480
     .invader_count $481
 
@@ -358,9 +363,19 @@ JMP program_begin
             INX
             LDA iid_yp
             STA invader_data x
-            INX
             
             INX ; setup isAlive and direction and stuff here.
+            LDA #$80 ; alive, facing right
+            STA invader_data X
+
+            LDA iid_i
+            AND #01 ; check to see if it's an odd numbered row
+            BEQ iid_postbeq
+                LDA #$81 ; alive, facing left
+                STA invader_data X
+            .iid_postbeq
+
+            INX ; skip over the distance, that's only relevant when the invader is moving downwards.
             INX
 
             CLC
@@ -381,6 +396,11 @@ JMP program_begin
     DEC iid_i
     BNE iid_iloop
 
+    ; set invader variables
+    LDA #1
+    STA invader_speed
+    LDA #32
+    STA invader_count
 
     LDX #low invader_data
     LDY #high invader_data
@@ -439,7 +459,7 @@ JMP program_begin
     dat 0
     .cur_invader
     dat 0
-.update_invader_sprite
+.update_invader_sprites
     ; Sprite 0: top left, x: -8 y: -8
     ; Sprite 1: top right, x: 0 y: -8
     ; Sprite 2: bottom left, x: -8 y: 0
@@ -469,6 +489,24 @@ JMP program_begin
         LDA invader_data Y
         STA cur_invader_y
 
+        INY
+        ; check if invader is alive. If not, set the sprite to invalid coord.
+        LDA invader_data Y
+        BMI uis_drawsprites
+            ;invalidate sprite coords
+            LDA #0
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            JMP update_invader_sprite_breakpoint
+
+        ; Draw the sprite
+        .uis_drawsprites
+
         SEC
         LDA cur_invader_x
         SBC #8
@@ -500,18 +538,19 @@ JMP program_begin
         LDA cur_invader_y
         STA sprite_y x
 
+        .update_invader_sprite_breakpoint
         INC cur_invader
         LDA cur_invader
         CMP #32
         BCC update_invader_sprite_outerloop
     RTS
 
-; Total player speed, about 2.5 ppf
-.move_player_speed
-dat $02
-.move_player_subspeed
-dat $80
 ; Read key input and move the player
+    ; Total player speed, about 2.5 ppf
+        .move_player_speed
+        dat $02
+        .move_player_subspeed
+        dat $80
 .move_player
     LDX #38 ; left arrow
     LDA keyboard_pos X
@@ -541,10 +580,144 @@ dat $80
 
     RTS
 
-.update_player_bullet_bspeed
-dat $6
+; Subroutine to update all space invaders:
+    ;1. update motion
+    ;2. test collision
+    ;3. update sprites
+.update_invaders
+    JSR move_invaders
+    JSR test_invader_collision
+    JSR update_invader_sprites
+    RTS
+
+;Move invaders subroutine
+    .inv_max_distance
+    dat 32
+    .mi_i
+    dat 32
+
+    .cur_inv_x
+    dat 0
+    .cur_inv_y
+    dat 0
+    .cur_inv_distance
+    dat 0
+    .cur_inv_alive
+    dat 0
+    .cur_inv_dir
+    dat 0
+
+    .mi_move_right
+        LDA cur_inv_x
+        CLC
+        ADC invader_speed
+        STA cur_inv_x
+        CMP #240
+        BCC mi_loop_continue_0 ; if it's not reached the end, just skip next code
+            LDA #0
+            STA cur_inv_distance
+            LDA #2 ; switch to downright
+            STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_left
+        SEC
+        LDA cur_inv_x
+        SBC invader_speed
+        STA cur_inv_x
+        LDA #16 
+        CMP cur_inv_x ; reverse of above operation
+        BCC mi_loop_continue_0
+            LDA #0
+            STA cur_inv_distance
+            LDA #3 ; switch to downleft
+            STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_downright
+        LDA #1	; switch to left
+        STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_downleft
+        LDA #0	; switch to right
+        STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .move_invaders
+    LDX #0
+    LDY #0
+
+    .mi_i_loop
+        ; initialize data variables from the invader table
+        LDA invader_data x
+        STA cur_inv_x
+        INX
+        LDA invader_data x
+        STA cur_inv_y
+        INX
+        LDA invader_data x
+        STA cur_inv_distance
+        INX
+        LDA invader_data x
+        AND #$80
+        BEQ mi_loop_continue_dead ; we don't care about anything else if it's dead.
+        LDA invader_data x
+        AND #$03 ; get the low two bits
+        STA cur_inv_dir ;right, left, downright, downleft
+
+        LDA cur_inv_dir
+        CMP #0 ; check right
+        BEQ mi_move_right
+
+        CMP #1 ; check left
+        BEQ mi_move_left
+
+        ; If it gets this far, it's moving down
+        CLC
+        LDA cur_inv_y
+        ADC invader_speed
+        CLC
+        LDA cur_inv_distance
+        ADC invader_speed
+
+        CMP inv_max_distance
+        BCC mi_loop_continue_0 ; if the distance is not greater than or equal to max distance, continue
+        
+        LDA cur_inv_dir
+        CMP #2
+        BEQ mi_move_downright
+
+        JMP mi_move_downleft ; if it gets this far, move downleft
+
+        .mi_loop_continue_0
+        ; put the data back into the invader table
+        LDA cur_inv_x
+        STA invader_data y
+        INY
+        LDA cur_inv_y
+        STA invader_data y
+        INY
+        LDA cur_inv_distance
+        STA invader_data y
+        INY
+        LDA cur_inv_dir
+        ORA #$80 ; set alive to true
+        STA invader_data y
+        
+
+    .mi_loop_continue_dead
+    DEC mi_i
+    BNE mi_i_loop
+    RTS
+
+
+.test_invader_collision
+    RTS
 
 ; subroutine to deactivate player bullet and hide its sprite.
+    .update_player_bullet_bspeed
+    dat $6
 .deactivate_player_bullet
     LDA #0
     STA ?player_bullet_active ; update the 'active' boolean
@@ -823,7 +996,7 @@ STA sprite_x x
 STA sprite_y x
 
 JSR update_player_sprite
-JSR update_invader_sprite
+JSR update_invader_sprites
 
 ;JSR print_sprite_mem 
 
@@ -841,6 +1014,8 @@ JSR update_invader_sprite
     JSR update_player_bullet
 
     JSR test_bullet_collision
+
+    JSR update_invaders
 
     LDA #100
     STA 0   ; graphics refresh system call
