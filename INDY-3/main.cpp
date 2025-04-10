@@ -19,8 +19,8 @@ extern std::vector<std::string> history;
 
 
 // Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+const int SCREEN_WIDTH = 1025;
+const int SCREEN_HEIGHT = 650;
 
 
 int main(int argc, char* args[])
@@ -143,7 +143,45 @@ int main(int argc, char* args[])
 
                 }
         
-                if (ImGui::MenuItem("Save")) { /* Handle save action */ }
+                if (ImGui::MenuItem("Save"))
+                {
+                    if (is_code_loaded_from_file && !filename.empty())
+                    {
+                        // Save (overwrite) to the loaded file
+                        SDL_RWops* file_handle = SDL_RWFromFile(filename.c_str(), "w");
+                        if (file_handle)
+                        {
+                            SDL_RWwrite(file_handle, displayed_text.c_str(), 1, displayed_text.length());
+                            SDL_RWclose(file_handle);
+                            printf("Saved to existing file: %s\n", filename.c_str());
+                        }
+                        else
+                        {
+                            printf("Failed to save file: %s\n", SDL_GetError());
+                        }
+                    }
+                    else
+                    {
+                        // Ask for a new file name
+                        const char* save_path = tinyfd_saveFileDialog("Save File", "untitled.txt", 0, nullptr, nullptr);
+                        if (save_path)
+                        {
+                            SDL_RWops* file_handle = SDL_RWFromFile(save_path, "w");
+                            if (file_handle)
+                            {
+                                SDL_RWwrite(file_handle, displayed_text.c_str(), 1, displayed_text.length());
+                                SDL_RWclose(file_handle);
+                                filename = save_path;
+                                is_code_loaded_from_file = true;  // Now it becomes a loaded file
+                                printf("Saved as new file: %s\n", filename.c_str());
+                            }
+                            else
+                            {
+                                printf("Failed to save file: %s\n", SDL_GetError());
+                            }
+                        }
+                    }
+                }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
                 ImGui::EndMenu();
             }
@@ -212,30 +250,7 @@ int main(int argc, char* args[])
 
         if (ImGui::Button("Execute", ImVec2(115, 30)))
         {
-            //if (!filename.empty())  // Case 1: A file is selected
-            //{
-            //    printf("Executing file: %s\n", filename.c_str());
-
-            //    // Initialize KVM
-            //    if (kvm_init() != 0) {
-            //        printf("KVM initialization failed.\n");
-            //        return -1;
-            //    }
-
-            //    // Attempt to load instructions into KVM and start the VM
-            //    if (kvm_load_instructions(filename.c_str()) != 0)
-            //    {
-            //        printf("Error loading instructions into KVM.\n");
-            //        return -1;
-            //    }
-            //    if (kvm_start(-1) != 0) 
-            //    {
-            //        printf("Error starting KVM VM.\n");
-            //    }
-            //    kvm_quit();
            
-            //}
-            //else 
             if (!displayed_text.empty())  // Case 2: User typed code in the code block
             {
                 printf("Executing typed code:\n%s\n", displayed_text.c_str());
@@ -312,7 +327,7 @@ int main(int argc, char* args[])
             displayed_text.resize(256);
         }
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(800, 200), ImGuiInputTextFlags_AllowTabInput);
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(800, 500), ImGuiInputTextFlags_AllowTabInput);
         
 
         ImGui::EndChild();
