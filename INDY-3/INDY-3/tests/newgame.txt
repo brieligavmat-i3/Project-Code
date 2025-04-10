@@ -47,6 +47,8 @@
 
     .invader_sprites $300 ; same as player sprites but for the invader
     .invader_atts $304
+    .score_value $308 ; 4 bytes for score
+    .score_tile_loc $87E6 ; these are in vram, in the tile map table.
 
     .invader_data $400 ; contains the data for the invaders. 4 bytes each, 128 bytes total
         ; Invader data is set up like so:
@@ -241,10 +243,116 @@ JMP program_begin
         INX
     BNE init_blocks_lp
 
-    LDX #lo tile_map_p3
-    LDY #hi tile_map_p3
-    JSR syscall_print_mem_page
+    RTS
 
+; Initializes the score display
+.init_score_display
+    LDX #$E0 ; last row
+    LDY #0
+    LDA #$1C ; 's'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$0C ; 'c'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$18 ; 'o'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$1B ; 'r'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX 
+    LDA #$0E ; 'e'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$27 ; ':'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+
+    ; set the palette for the score numbers
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+
+
+    LDX #0
+    LDA #0
+
+    ; zero out score
+    STA score_value X
+    INX
+    STA score_value x
+    INX
+    STA score_value X
+    INX
+    STA score_value x
+    
+    JSR update_score
+
+    RTS
+
+; Update the four score tiles to match the four score bytes
+.update_score
+
+    LDX #0
+    LDY #3
+    .us_loop
+        LDA score_value x
+        STA score_tile_loc Y
+
+        DEY
+        INX 
+        CPX #4
+        BNE us_loop
+    RTS
+
+; use this for counterstop (score overflow)
+.as_set_score_nines
+    LDX #0
+    LDA #9
+    STA score_value X
+    INX
+    STA score_value X
+    INX
+    STA score_value X
+    INX
+    STA score_value X
+    JMP end_add_score
+
+.add_score
+    LDX #0
+
+    ; if x > 3, set all to 99
+    ; else:
+    ; add score to xth number
+    ; if > 9, set to zero, continue to next number
+
+    .as_loop
+        TXA 
+        CMP #4
+        BCS as_set_score_nines ; counterstop check
+
+        INC score_value x
+        LDA score_value x
+        CMP #$A
+        BCC end_add_score
+
+        LDA #0
+        STA score_value x
+        INX
+        JMP as_loop
+
+    .end_add_score
+    JSR update_score
     RTS
 
 ; Initialize player sprite
@@ -352,6 +460,9 @@ JMP program_begin
     LDA #16
     STA iid_yp
 
+    LDA #4
+    STA iid_i ; reset outer loop
+
     .iid_iloop
         LDA #8
         STA iid_j ; reset inner loop
@@ -407,10 +518,10 @@ JMP program_begin
     LDA #16
     STA invader_threshold
 
-    ;LDX #low invader_data
-    ;LDY #high invader_data
+    LDX #low invader_data
+    LDY #high invader_data
 
-    ;JSR syscall_print_mem_page
+    JSR syscall_print_mem_page
     RTS
 
 ; Update player sprite
@@ -843,7 +954,16 @@ JMP program_begin
 
     .kci_end
 
+    JSR add_score
+
     JSR deactivate_player_bullet
+
+    ; if count = 0, spawn new invaders
+    LDA invader_count
+    BNE #6
+        JSR init_invader_sprite
+        JSR init_invader_data
+
     RTS
 
 ; subroutine to deactivate player bullet and hide its sprite.
@@ -856,6 +976,8 @@ JMP program_begin
     LDX player_bullet_sprite_index
     LDA #-1
     STA sprite_x X
+    STA sprite_y X
+    STA player_bullet_y
     RTS
 
 ; Update the position and sprite of player bullet
@@ -887,11 +1009,6 @@ JMP program_begin
 
         ; if there was no subtraction overflow (underflow), skip this code.
         BCS update_player_bullet_no_overflow
-
-            ;LDX #0
-            ;LDY #2
-            ;JSR syscall_print_mem_page
-
             JSR deactivate_player_bullet
             RTS
         .update_player_bullet_no_overflow
@@ -1100,6 +1217,8 @@ JSR init_invader_sprite
 
 JSR init_blocks
 
+JSR init_score_display
+
 JSR init_invader_data
 
 ; Initialize bullet sprite
@@ -1129,7 +1248,7 @@ STA sprite_y x
 JSR update_player_sprite
 JSR update_invader_sprites
 
-JSR print_sprite_mem 
+;JSR print_sprite_mem 
 
 ; Main loop
 .program_main_loop
@@ -1148,10 +1267,6 @@ JSR print_sprite_mem
 
     JSR update_invaders
 
-    ;LDX #lo invader_data
-    ;LDY #hi invader_data
-    ;JSR syscall_print_mem_page
-
     LDA #100
     STA 0   ; graphics refresh system call
 
@@ -1164,7 +1279,6 @@ JSR print_sprite_mem
 
 .end_program
 INC 0 ; quit
-
 
 ; Data section
 
