@@ -297,12 +297,10 @@ int main(int argc, char* args[])
                     if (kvm_load_instructions(temp_filename.c_str()) != 0)
                     {
                         printf("Error loading instructions into KVM.\n");
-                        return -1;
                     }
-                    if (kvm_start(-1) != 0)
+                    else if (kvm_start(-1) != 0)
                     {
                         printf("Error starting KVM VM.\n");
-                        return -1;
                     }
                     kvm_quit(); 
                 }
