@@ -153,4 +153,8 @@
       <Filter>Header Files\vm</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="assembler.py" />
+    <None Include="graphics_loader.py" />
+  </ItemGroup>
 </Project>
