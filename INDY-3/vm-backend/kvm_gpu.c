@@ -22,13 +22,15 @@ int kvm_gpu_init(kvm_memory* mem) {
 		SDL_WINDOWPOS_CENTERED,
 		OUTER_WINDOW_SIZE,
 		OUTER_WINDOW_SIZE,
-		SDL_WINDOW_BORDERLESS
+		SDL_WINDOW_BORDERLESS | SDL_WINDOW_ALWAYS_ON_TOP
 	);
 
 	if (!main_window) {
 		printf("Error creating SDL window.\n");
 		return -1;
 	}
+
+	SDL_WarpMouseInWindow(main_window, 128, 128);
 
 	main_renderer = SDL_CreateRenderer(
 		main_window,

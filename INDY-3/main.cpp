@@ -19,8 +19,8 @@ extern std::vector<std::string> history;
 
 
 // Screen dimension constants
-const int SCREEN_WIDTH = 1025;
-const int SCREEN_HEIGHT = 650;
+int SCREEN_WIDTH = 1025;
+int SCREEN_HEIGHT = 650;
 
 
 int main(int argc, char* args[])
@@ -40,6 +40,7 @@ int main(int argc, char* args[])
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return -1;
     }
+    SDL_GetWindowSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
     // Create SDL Renderer
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -322,14 +323,14 @@ int main(int argc, char* args[])
 
               
         // Creates a scrollable box to display the generated code
-        ImGui::BeginChild("CodePreview", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("CodePreview", ImVec2(0, SCREEN_HEIGHT), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Ensure the text buffer is large enough for user input
         if (displayed_text.size() <= 1) {
             displayed_text.resize(256);
         }
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(800, 500), ImGuiInputTextFlags_AllowTabInput);
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(SCREEN_WIDTH-250, SCREEN_HEIGHT - 100), ImGuiInputTextFlags_AllowTabInput);
         
 
         ImGui::EndChild();
