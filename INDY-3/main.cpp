@@ -99,6 +99,10 @@ int main(int argc, char* args[])
         {
             if (ImGui::BeginMenu("File")) // create drop down menu named file
             {
+                if (ImGui::MenuItem("New Project")) {
+                    is_code_loaded_from_file = false;
+                    displayed_text.clear();
+                }
                 if (ImGui::MenuItem("Open"))
                 {
                     const char* filter[] = { "*.txt" };  // File filter
