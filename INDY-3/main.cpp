@@ -1,5 +1,5 @@
-﻿/*This source code copyrighted by Lazy Foo' Productions 2004-2024
-and may not be redistributed without written permission.*/
+﻿// GUI application
+// Author: J. Lee
 
 // Using SDL, SDL_Renderer, and ImGui
 #include <SDL.h>
@@ -22,6 +22,8 @@ extern std::vector<std::string> history;
 int SCREEN_WIDTH = 1025;
 int SCREEN_HEIGHT = 650;
 
+const size_t MAX_BUF_SIZE = 1000000;
+
 
 int main(int argc, char* args[])
 {
@@ -34,7 +36,7 @@ int main(int argc, char* args[])
 
     // Create SDL Window
     SDL_Window* window = SDL_CreateWindow("INDY-3", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
+        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);// | SDL_WINDOW_FULLSCREEN_DESKTOP);
     if (!window)
     {
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
@@ -70,7 +72,7 @@ int main(int argc, char* args[])
 
     bool show_add_window = false;
     bool show_text_input_window = false; // Track if input window is open
-    char input_text[128] = ""; // Buffer for user input
+    //char input_text[MAX_BUF_SIZE] = ""; // Buffer for user input
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
@@ -119,7 +121,7 @@ int main(int argc, char* args[])
                             if (file_size > 0)
                             {
                                 // Resize the displayed_text buffer to fit the file content
-                                displayed_text.resize(file_size);
+                                displayed_text.resize(file_size * 2);
                                 SDL_RWread(file_handle, &displayed_text[0], 1, file_size);
 
                                 // Ensure the string is null-terminated
@@ -331,11 +333,11 @@ int main(int argc, char* args[])
 
         // Ensure the text buffer is large enough for user input
         if (displayed_text.size() <= 1) {
-            displayed_text.resize(256);
+            displayed_text.resize(MAX_BUF_SIZE);
         }
+
         // Displays the selected preset name and the user-entered text inside the scrollable area
         ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(SCREEN_WIDTH-250, SCREEN_HEIGHT - 100), ImGuiInputTextFlags_AllowTabInput);
-        
 
         ImGui::EndChild();
 
