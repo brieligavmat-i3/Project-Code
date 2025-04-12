@@ -21,6 +21,7 @@
 
 // System calls
 #define SYSCALL_QUIT 1
+#define SYSCALL_PRINT_MEM_PAGE 253
 #define SYSCALL_PRINTCPU 255
 #define SYSCALL_PRINTF 254
 
@@ -257,7 +258,7 @@ int kvm_start(int max_cycles) {
 				char* print_string = malloc(256);
 				uint16_t str_end_pt = load_string(print_string, syscall_addr, 256);
 				uint8_t bytes_to_print = kvm_memory_get_byte(mem, str_end_pt);
-				printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
+				//printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
 				printf("%s ", print_string);
 
 				for (int i = 0; i < bytes_to_print; i++) {
@@ -337,6 +338,11 @@ int kvm_start(int max_cycles) {
 			case SYSCALL_GPU_REFRESH:
 				kvm_gpu_refresh_graphics(mem);
 				break;
+			case SYSCALL_PRINT_MEM_PAGE:
+				{
+					// Print one page of memory starting at the specified address.
+					kvm_memory_print_hexdump(mem, syscall_addr, 256);
+				}break;
 			}
 
 			mem->data[0] = 0;

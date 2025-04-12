@@ -57,6 +57,8 @@ int main(int argc, char* args[])
     ImGuiIO& io = ImGui::GetIO();
     (void)io;
 
+    
+
     // Setup ImGui SDL2 + SDL_Renderer2 bindings
     ImGui_ImplSDL2_InitForSDLRenderer(window, renderer);
     ImGui_ImplSDLRenderer2_Init(renderer);
