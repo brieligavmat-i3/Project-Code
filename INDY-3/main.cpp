@@ -329,7 +329,7 @@ int main(int argc, char* args[])
 
               
         // Creates a scrollable box to display the generated code
-        ImGui::BeginChild("CodePreview", ImVec2(0, 300), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("CodePreview", ImVec2(0, 600), true, ImGuiWindowFlags_HorizontalScrollbar);
 
         // Ensure the text buffer is large enough for user input
         if (displayed_text.size() <= 1) {
