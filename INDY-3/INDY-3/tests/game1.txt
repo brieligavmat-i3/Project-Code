@@ -202,7 +202,7 @@ JMP program_begin
             SHR mouse_y
             SHR mouse_y
 
-        LDA #0          ; reset calculation values
+        LDA #0         ; reset calculation values
         STA mouse_tile
 
         LDA mouse_y

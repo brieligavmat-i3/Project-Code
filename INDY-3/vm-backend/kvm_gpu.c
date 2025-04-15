@@ -241,7 +241,7 @@ int render_sprites(SDL_Surface* surf, kvm_memory* mem) {
 	uint8_t* palettes = mem_data + VRAM_COLOR_PALETTES;
 
 	SDL_LockSurface(surf);
-	for (int sprite_i = 0; sprite_i < 1; sprite_i++) {
+	for (int sprite_i = 0; sprite_i < 256; sprite_i++) {
 		uint8_t t_x = sprite_x[sprite_i];
 		uint8_t t_y = sprite_y[sprite_i];
 		if ((uint8_t)(t_x - 1) > 248 || (uint8_t)(t_y - 1) > 248) {
