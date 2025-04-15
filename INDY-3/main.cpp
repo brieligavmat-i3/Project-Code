@@ -166,12 +166,19 @@ int main(int argc, char* args[])
                         const char* save_path = tinyfd_saveFileDialog("Save File", "untitled.txt", 0, nullptr, nullptr);
                         if (save_path)
                         {
-                            SDL_RWops* file_handle = SDL_RWFromFile(save_path, "w");
+                            std::string path_str = save_path;
+
+                            // Ensure the filename ends with .txt
+                            if (path_str.length() < 4 || path_str.substr(path_str.length() - 4) != ".txt") {
+                                path_str += ".txt";
+                            }
+
+                            SDL_RWops* file_handle = SDL_RWFromFile(path_str.c_str(), "w");
                             if (file_handle)
                             {
                                 SDL_RWwrite(file_handle, displayed_text.c_str(), 1, displayed_text.length());
                                 SDL_RWclose(file_handle);
-                                filename = save_path;
+                                filename = path_str;
                                 is_code_loaded_from_file = true;  // Now it becomes a loaded file
                                 printf("Saved as new file: %s\n", filename.c_str());
                             }
