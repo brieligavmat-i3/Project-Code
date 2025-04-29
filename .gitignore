@@ -8,6 +8,8 @@
 *.kvmpix
 *.kvmpal
 
+temp_code.txt
+
 # User-specific files
 *.rsuser
 *.suo

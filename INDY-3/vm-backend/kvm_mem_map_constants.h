@@ -6,7 +6,7 @@
 #pragma once
 
 // This is not a memory constant but I need it in enough spots for it to go here.
-#define OUTER_WINDOW_SIZE 512
+#define OUTER_WINDOW_SIZE 768
 #define WINDOW_SIZE 256
 
 

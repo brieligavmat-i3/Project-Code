@@ -29,7 +29,7 @@
     <ClCompile Include="..\libtinyfiledialogs-master\tinyfiledialogs.c" />
     <ClCompile Include="..\main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\vm-backend\kvm.c" />
     <ClCompile Include="..\vm-backend\kvm_cpu.c" />
@@ -44,6 +44,7 @@
     </ClCompile>
     <ClCompile Include="..\vm-backend\test_kvm.c">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -65,6 +66,10 @@
     <ClInclude Include="..\vm-backend\leakcheck.h" />
     <ClInclude Include="..\vm-backend\leakcheck_util.h" />
     <ClInclude Include="..\vm-backend\linklist.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="assembler.py" />
+    <None Include="graphics_loader.py" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
@@ -120,11 +125,11 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\vm-backend;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\libtinyfiledialogs-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\libtinyfiledialogs-master;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master\backends;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\INDY-3;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\vm-backend;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\libtinyfiledialogs-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\libtinyfiledialogs-master;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master\backends;C:\Users\jhlee\Documents\GitHub\Project-Code\INDY-3\imgui-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Users\capnk\Desktop\Project-Code\INDY-3;C:\Libraries\imgui;C:\Users\jhlee\Desktop\INDY-3\imgui-master\backends;C:\Users\jhlee\Desktop\INDY-3\imgui-master;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\include;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Libraries\SDL2\lib\x64;C:\Users\jhlee\Desktop\SDL2-devel-2.30.12-VC\SDL2-2.30.12\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;C:\Libraries\imgui;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\capnk\Desktop\Project-Code\INDY-3\libtinyfiledialogs-master;C:\Users\capnk\Desktop\Project-Code\INDY-3\vm-backend;C:\Libraries\SDL2\include;C:\Libraries\imgui\backends;C:\Libraries\imgui;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Libraries\SDL2\lib\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">

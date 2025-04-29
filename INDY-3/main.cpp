@@ -1,5 +1,5 @@
-﻿/*This source code copyrighted by Lazy Foo' Productions 2004-2024
-and may not be redistributed without written permission.*/
+﻿// GUI application
+// Author: J. Lee
 
 // Using SDL, SDL_Renderer, and ImGui
 #include <SDL.h>
@@ -10,10 +10,19 @@ and may not be redistributed without written permission.*/
 #include "imgui_impl_sdlrenderer2.h"
 #include <vector>
 #include "tinyfiledialogs.h"
+extern "C"
+{
+#include "kvm.h"
+}
+
+extern std::vector<std::string> history;
+
 
 // Screen dimension constants
-const int SCREEN_WIDTH = 640;
-const int SCREEN_HEIGHT = 480;
+int SCREEN_WIDTH = 1025;
+int SCREEN_HEIGHT = 650;
+
+const size_t MAX_BUF_SIZE = 1000000;
 
 
 int main(int argc, char* args[])
@@ -27,12 +36,13 @@ int main(int argc, char* args[])
 
     // Create SDL Window
     SDL_Window* window = SDL_CreateWindow("INDY-3", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+        SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN | SDL_WINDOW_FULLSCREEN_DESKTOP);
     if (!window)
     {
         printf("Window could not be created! SDL_Error: %s\n", SDL_GetError());
         return -1;
     }
+    SDL_GetWindowSize(window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
 
     // Create SDL Renderer
     SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
@@ -62,12 +72,14 @@ int main(int argc, char* args[])
 
     bool show_add_window = false;
     bool show_text_input_window = false; // Track if input window is open
-    char input_text[128] = ""; // Buffer for user input
+    //char input_text[MAX_BUF_SIZE] = ""; // Buffer for user input
     std::string displayed_text = ""; // Stores submitted text
     std::string preset_name = ""; // Store the name of the selected preset  
     std::string temp_preset_name = ""; // Holds preset before submission
-    std::vector<std::string> history; // Stores each entry separately
-
+   
+    std::string filename;
+    std::vector<std::string> history;
+    bool is_code_loaded_from_file = false;
     
     while (!quit)
     {
@@ -75,7 +87,7 @@ int main(int argc, char* args[])
         while (SDL_PollEvent(&e))
         {
             ImGui_ImplSDL2_ProcessEvent(&e);
-            if (e.type == SDL_QUIT) quit = true;
+            if (e.type == SDL_QUIT) { quit = true; }
         }
 
         // Start ImGui frame
@@ -89,64 +101,96 @@ int main(int argc, char* args[])
         {
             if (ImGui::BeginMenu("File")) // create drop down menu named file
             {
+                if (ImGui::MenuItem("New Project")) {
+                    is_code_loaded_from_file = false;
+                    displayed_text.clear();
+                }
                 if (ImGui::MenuItem("Open"))
                 {
-                    const char* filter[] = { "*.txt" };
-                    const char* filename = tinyfd_openFileDialog("Open File", "", 1, filter, "Text Files", 0);
+                    const char* filter[] = { "*.txt" };  // File filter
+                    const char* file = tinyfd_openFileDialog("Open File", "", 1, filter, "Text Files", 0);
 
-                    if (filename)
+                    if (file)
                     {
-                        SDL_RWops* file = SDL_RWFromFile(filename, "r");
-                        if (file)
+                        filename = file;  // Assign the file path to the filename variable
+                        SDL_RWops* file_handle = SDL_RWFromFile(filename.c_str(), "r");
+                        if (file_handle)
                         {
-                            displayed_text.clear(); // Clear existing text
-
-                            Sint64 file_size = SDL_RWsize(file);
+                            displayed_text.clear();
+                            Sint64 file_size = SDL_RWsize(file_handle);
                             if (file_size > 0)
                             {
-                                static char buffer[4096] = "";
+                                // Resize the displayed_text buffer to fit the file content
+                                displayed_text.resize(file_size * 2);
+                                SDL_RWread(file_handle, &displayed_text[0], 1, file_size);
 
-                                std::vector<char> temp_buffer(file_size + 1, '\0');
-                                SDL_RWread(file, temp_buffer.data(), 1, file_size);
+                                // Ensure the string is null-terminated
+                                displayed_text.push_back('\0');  // Append null-terminator at the end
 
-                                // Now copy the contents to the buffer
-                                strncpy_s(buffer, sizeof(buffer), temp_buffer.data(), _TRUNCATE);
-                                buffer[sizeof(buffer) - 1] = '\0'; // Ensure null-termination
-
-                                // Update displayed_text
-                                displayed_text = buffer; // Use the buffer directly for simplicity
-
-                                // Log the loaded text
                                 printf("Loaded text: %s\n", displayed_text.c_str());
 
-                                // In the UI code, make sure to render displayed_text
-                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(-FLT_MIN, 200));
+                                // Pass the buffer to ImGui ensuring the length does not include the null terminator
+                                ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(-FLT_MIN, 200), ImGuiInputTextFlags_AllowTabInput);
 
+                                // Store the loaded file content in history
+                                history.push_back(displayed_text);
 
-                                // Log to see if data is being read
-                                printf("File successfully loaded: %s\n", filename);
+                                // Set the flag to indicate that the code was loaded from a file
+                                is_code_loaded_from_file = true;
                             }
                             else
                             {
                                 printf("Error: File is empty or cannot be read\n");
                             }
-                            SDL_RWclose(file);
+                            SDL_RWclose(file_handle);
                         }
                         else
                         {
                             printf("Failed to open file: %s\n", SDL_GetError());
                         }
                     }
-                    else
-                    {
-                        printf("Failed to select file or user canceled the dialog.\n");
-                    }
 
                 }
         
-        
-
-                if (ImGui::MenuItem("Save")) { /* Handle save action */ }
+                if (ImGui::MenuItem("Save"))
+                {
+                    if (is_code_loaded_from_file && !filename.empty())
+                    {
+                        // Save (overwrite) to the loaded file
+                        SDL_RWops* file_handle = SDL_RWFromFile(filename.c_str(), "w");
+                        if (file_handle)
+                        {
+                            SDL_RWwrite(file_handle, displayed_text.c_str(), 1, displayed_text.length());
+                            SDL_RWclose(file_handle);
+                            printf("Saved to existing file: %s\n", filename.c_str());
+                        }
+                        else
+                        {
+                            printf("Failed to save file: %s\n", SDL_GetError());
+                        }
+                    }
+                    else
+                    {
+                        // Ask for a new file name
+                        const char* save_path = tinyfd_saveFileDialog("Save File", "untitled.txt", 0, nullptr, nullptr);
+                        if (save_path)
+                        {
+                            SDL_RWops* file_handle = SDL_RWFromFile(save_path, "w");
+                            if (file_handle)
+                            {
+                                SDL_RWwrite(file_handle, displayed_text.c_str(), 1, displayed_text.length());
+                                SDL_RWclose(file_handle);
+                                filename = save_path;
+                                is_code_loaded_from_file = true;  // Now it becomes a loaded file
+                                printf("Saved as new file: %s\n", filename.c_str());
+                            }
+                            else
+                            {
+                                printf("Failed to save file: %s\n", SDL_GetError());
+                            }
+                        }
+                    }
+                }
                 if (ImGui::MenuItem("Exit")) { quit = true; }
                 ImGui::EndMenu();
             }
@@ -183,30 +227,95 @@ int main(int argc, char* args[])
             ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
         ImGui::Text("Code Panel");
-        // Big "Add" button in the top-left 
-        if (ImGui::Button("Add", ImVec2(115, 50))) // Button position
-        {
-            show_add_window = true;
-        }
-        
+                
         if (ImGui::Button("Undo", ImVec2(115, 30))) // Undo button
         {
             if (!history.empty())
             {
-                history.pop_back(); // Remove the last added input
+                // Remove the last added input from history
+                history.pop_back();
 
                 // Rebuild displayed_text from history
                 displayed_text.clear();
-                for (size_t i = 0; i < history.size(); ++i)
+                if (!history.empty())
                 {
-                    if (i > 0) displayed_text.append("\n");
-                    displayed_text.append(history[i]);
+                    displayed_text = history.back();  // Set displayed_text to the last state in history
+                }
+                else
+                {
+                    displayed_text.clear();  // If no history, clear the text
+                }
+
+                // Reset filename (clear if it was linked to an invalid file)
+                filename.clear();
+
+                // If the code was loaded from a file, reset flag
+                if (is_code_loaded_from_file)
+                {
+                    is_code_loaded_from_file = false;
                 }
             }
         }
 
+        if (ImGui::Button("Execute", ImVec2(115, 30)))
+        {
+           
+            if (!displayed_text.empty())  // Case 2: User typed code in the code block
+            {
+                printf("Executing typed code:\n%s\n", displayed_text.c_str());
 
-        ImGui::EndChild();
+                // Sanitize the displayed text: Remove any non-printable characters or null bytes
+                std::string sanitized_text;
+                for (char c : displayed_text)
+                {
+                    if (isprint(c) || c == '\n' || c == '\t')  // Only include printable characters
+                    {
+                        sanitized_text += c;
+                    }
+                }
+
+                // Set the temporary file name as "temp_code"
+                std::string temp_filename = "temp_code";  // No .txt extension
+                SDL_RWops* file_handle = SDL_RWFromFile((temp_filename+".txt").c_str(), "w");
+
+                if (file_handle)
+                {
+                    // Write the sanitized code to the file
+                    Sint64 file_size = sanitized_text.size();
+                    SDL_RWwrite(file_handle, (sanitized_text).c_str(), 1, file_size);
+                    SDL_RWclose(file_handle);
+
+                    printf("Temporary file created: %s\n", temp_filename.c_str());
+
+                    // Initialize KVM
+                    if (kvm_init() != 0) {
+                        printf("KVM initialization failed.\n");
+                        return -1;
+                    }
+
+                    // Now load the temporary file into KVM
+                    if (kvm_load_instructions(temp_filename.c_str()) != 0)
+                    {
+                        printf("Error loading instructions into KVM.\n");
+                    }
+                    else if (kvm_start(-1) != 0)
+                    {
+                        printf("Error starting KVM VM.\n");
+                    }
+                    kvm_quit(); 
+                }
+                else
+                {
+                    printf("Error creating temporary file: %s\n", temp_filename.c_str());
+                }
+            }
+            else
+            {
+                printf("No code to execute.\n");
+            }
+        }
+
+         ImGui::EndChild();
         ImGui::NextColumn(); // Move to Right Box
 
         // Right Box (Large, Fully Expanding)
@@ -216,15 +325,17 @@ int main(int argc, char* args[])
         ImGui::Text("Code Block");
         ImGui::Separator();
 
-
-
-        // Display section for generated code
-        
+              
         // Creates a scrollable box to display the generated code
-        ImGui::BeginChild("CodePreview", ImVec2(0, 200), true, ImGuiWindowFlags_HorizontalScrollbar);
+        ImGui::BeginChild("CodePreview", ImVec2(0, SCREEN_HEIGHT), true, ImGuiWindowFlags_HorizontalScrollbar);
+
+        // Ensure the text buffer is large enough for user input
+        if (displayed_text.size() <= 1) {
+            displayed_text.resize(MAX_BUF_SIZE);
+        }
 
         // Displays the selected preset name and the user-entered text inside the scrollable area
-        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size() + 1, ImVec2(500, 200)); 
+        ImGui::InputTextMultiline("##CodeText", &displayed_text[0], displayed_text.size(), ImVec2(SCREEN_WIDTH-250, SCREEN_HEIGHT - 100), ImGuiInputTextFlags_AllowTabInput);
 
         ImGui::EndChild();
 
@@ -233,82 +344,18 @@ int main(int argc, char* args[])
         ImGui::Columns(1); // Exit column mode
         ImGui::End();
 
-        // "Add" button pop-up window
-        if (show_add_window)
-        {
-            ImGui::Begin("Add", &show_add_window, ImGuiWindowFlags_AlwaysAutoResize);
-
-            ImGui::Text("Select Instruction:");
-
-            // Capture which button was clicked and set preset_name
-            if (ImGui::Button("NOP")) { temp_preset_name = "NOP"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 2")) { temp_preset_name = "Preset 2"; show_text_input_window = true; }
-            if (ImGui::Button("Preset 3")) { temp_preset_name = "Preset 3"; show_text_input_window = true; }
-
-
-            if (ImGui::Button("Close")) {
-                show_add_window = false;
-            }
-
-            ImGui::End();
-        }
-
-        // Show input window when the button is clicked
-        if (show_text_input_window)
-        {
-            // Create a window with title, when x is clicked closes
-            ImGui::Begin("Enter Input", &show_text_input_window, ImGuiWindowFlags_AlwaysAutoResize);
-
-            // Show input prompt
-            ImGui::Text("Enter your Input: ");
-            // Input box, input_text to store text
-            ImGui::InputText("##input", input_text, IM_ARRAYSIZE(input_text));
-
-            //Submit button
-            if (ImGui::Button("Submit"))
-            {
-                if (!temp_preset_name.empty()) // Ensure preset is selected
-                {
-                    std::string new_entry = temp_preset_name + " " + input_text;
-
-                    history.push_back(new_entry); // Store entry in history 
-
-                    if (displayed_text.empty())
-                    {
-                        displayed_text = new_entry; // First entry, no newline
-                    }
-                    else
-                    {
-                        displayed_text.append("\n").append(new_entry); // Append with newline only after the first entry
-                    }
-
-                    temp_preset_name.clear();  // Reset preset
-                    input_text[0] = '\0';   // Clear input text
-
-                    show_add_window = false; 
-                }
-                show_text_input_window = false;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel"))
-            {
-                show_text_input_window = false;
-            }
-
-            ImGui::End();
-        }
-
+        
         // Rendering
         ImGui::Render();
         ImGui::EndFrame();
 
         SDL_SetRenderDrawColor(renderer, 51, 51, 51, 255);
         SDL_RenderClear(renderer);
+
         ImGui_ImplSDLRenderer2_RenderDrawData(ImGui::GetDrawData(), renderer);
         SDL_RenderPresent(renderer);
     }
-
+  
     // Cleanup ImGui
     ImGui_ImplSDLRenderer2_Shutdown();
     ImGui_ImplSDL2_Shutdown();

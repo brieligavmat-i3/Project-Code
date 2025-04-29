@@ -1,9 +1,0 @@
-; test hi and lo addresses
-LDA #hi data
-STA $4
-LDA #lo data
-STA $3
-
-inc 0
-
-.data

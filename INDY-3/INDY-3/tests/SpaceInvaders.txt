@@ -1,0 +1,1316 @@
+; Constant memory locations
+    
+    ; input locations
+        .keyboard_pos $7C00
+        .mouse_pos $7D00
+    
+    ;   VRAM memory locations
+        .bgcolor_pos $8000
+        .palette_pos $8003
+
+        .screen_flags $80FF
+
+        ; Tilemap information
+            ; map table
+            .tile_map_p1 $8400
+            .tile_map_p2 $8500
+            .tile_map_p3 $8600
+            .tile_map_p4 $8700
+
+            ; attribute table
+            .tile_att_p1 $8800
+            .tile_att_p2 $8900
+            .tile_att_p3 $8A00
+            .tile_att_p4 $8B00
+
+            .tile_line_shift_table $8100
+            .tile_line_lock_table $8200
+        
+        ; Sprite information
+        .sprite_x $8C00
+        .sprite_y $8D00
+        .sprite_tile $8E00
+        .sprite_att $8F00
+
+; Game memory locations
+    ; note to self, don't use page 01 for game variables >_< (that's the stack)
+    .player_x $250
+    .player_subx $251
+    .player_y $252
+
+    .player_sprites $260 ; contains the four tiles of the player sprite
+    .player_atts $264    ; contains the attributes for said tiles
+
+    .player_bullet_x $268 ; There can only be one player bullet on the screen.
+    .player_bullet_y $269
+    .?player_bullet_active $26A ; boolean for whether or not bullet is active
+
+    .invader_sprites $300 ; same as player sprites but for the invader
+    .invader_atts $304
+    .score_value $308 ; 4 bytes for score
+    .score_tile_loc $87E6 ; these are in vram, in the tile map table.
+
+    .invader_data $400 ; contains the data for the invaders. 4 bytes each, 128 bytes total
+        ; Invader data is set up like so:
+        ; 0: x position
+        ; 1: y position
+        ; 2: bit 7: isAlive? low 2 bits: direction (right, left, downright, downleft)
+        ; 3: distance to travel downwards
+    .invader_speed $480
+    .invader_count $481
+    .invader_threshold $482
+
+; Jump to code start point. This call skips all of the subroutines defined after
+JMP program_begin
+
+.rng_start  ; idk if I'll use this. If I do it'll be using a page of code as an RNG lookup table.
+
+; Print sprite memory pages
+.print_sprite_mem
+    LDX #lo sprite_x
+    LDY #hi sprite_x
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_y
+    LDY #hi sprite_y
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_tile
+    LDY #hi sprite_tile
+    JSR syscall_print_mem_page
+
+    LDX #lo sprite_att
+    LDY #hi sprite_att
+    JSR syscall_print_mem_page
+    RTS
+
+; Clear Titles
+; Subroutine: sets all values in the tile map to the value of the accumulator, and the attributes to the value of Y
+.clear_tiles
+    ;LDA #$FF    ; value to clear the tile with
+    ;LDY #0      ; value to clear the attribute with
+
+    ; clear the first page
+    LDX #0
+    .clear_tiles_pg1
+        STA tile_map_p1 x
+        STY tile_att_p1 x
+        DEX
+    BNE clear_tiles_pg1
+
+    ; clear the second page
+    LDX #0
+    .clear_tiles_pg2
+        STA tile_map_p2 x
+        STY tile_att_p2 x
+        DEX
+    BNE clear_tiles_pg2
+
+    ; clear the third page
+    LDX #0
+    .clear_tiles_pg3
+        STA tile_map_p3 x
+        STY tile_att_p3 x
+        DEX
+    BNE clear_tiles_pg3
+
+    ; clear the fourth page
+    LDX #0
+    .clear_tiles_pg4
+        STA tile_map_p4 x
+        STY tile_att_p4 x
+        DEX
+    BNE clear_tiles_pg4
+
+    RTS
+
+; Load graphics
+; Subroutine: loads the graphics and palette files
+.load_graphics
+    ; load the graphics
+
+    LDX #low graphics_file
+    LDY #high graphics_file
+
+    STX 1
+    STY 2
+
+    LDA #3
+    STA 0 ;trigger system call to load the graphics
+
+    CLC
+    LDA #10 ; check for success
+    ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+    BCS end_program
+
+    ; load the palettes
+
+    LDX #low palette_file
+    LDY #high palette_file
+
+    STX 1
+    STY 2
+
+    LDA #2
+    STA 0 ;trigger system call to load the palettes
+
+    CLC
+    LDA #10 ; check for success
+    ADC $1  ; addr 1 is $FF on failure, will trigger carry flag
+
+    BCS end_program
+    RTS
+
+; Check for quit
+; Subroutine: jumps to end_program if the 'escape' key is pressed.
+.check_for_quit
+    LDA #50 ; get key input
+    STA 0
+
+    LDX #52 ; escape key is 52
+    LDA keyboard_pos x
+    CMP #0
+
+    BNE end_program
+    RTS
+
+; Delay X | (Y<<8) milliseconds
+; Subroutine: Calls a 'delay' system call using the current values of x and y (x is low, y is high)
+.delay_millis
+    LDA #14
+    STX 1
+    STY 2
+    STA 0
+    RTS
+
+; Call the print memory page syscall. Uses x for low and y for high byte of the starting address.
+.syscall_print_mem_page
+    LDA #253
+    STX 1
+    STY 2
+    STA 0
+    RTS
+
+; Initialize Ground
+; Subroutine: Uses the data section (.floor_tiles, .floor_attributes) to draw the ground
+.init_ground
+    .counter $200 ; counter variable at address 200hex
+    LDX #32
+    STX counter
+
+    LDA floor_tiles         ; value to clear the tile with
+    LDY floor_attributes    ; value to clear the attribute with
+
+    ; clear the first line of ground
+    LDX #160
+    .init_ground_pt1
+        STA tile_map_p4 x
+        STY tile_att_p4 x
+        INX
+        DEC counter
+    BNE init_ground_pt1  
+
+    ; initialize second and third rows of tiles
+    LDX #1 
+    LDA floor_tiles X         ; value to clear the tile with
+    LDY floor_attributes X    ; value to clear the attribute with
+
+    LDX #64
+    STX counter
+
+    LDX #192
+    .init_ground_pt2
+        STA tile_map_p4 X
+        STY tile_att_p4 X
+        INX
+        DEC counter
+    BNE init_ground_pt2
+
+    RTS
+
+; Initialize Blocks
+; Fills in some shield blocks.
+.init_blocks
+    LDA block_tile          ; value to clear the tile with
+    LDY block_attributes    ; value to clear the attribute with
+
+    ; put blocks in the third page
+    LDX #128
+    .init_blocks_lp
+        STA tile_map_p3 x
+        STY tile_att_p3 x
+        INX
+    BNE init_blocks_lp
+
+    RTS
+
+; Initializes the score display
+.init_score_display
+    LDX #$E0 ; last row
+    LDY #0
+    LDA #$1C ; 's'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$0C ; 'c'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$18 ; 'o'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$1B ; 'r'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX 
+    LDA #$0E ; 'e'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+    INX
+    LDA #$27 ; ':'
+    STA tile_map_p4 x
+    STY tile_att_p4 x
+
+    ; set the palette for the score numbers
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+    INX
+    STY tile_att_p4 x
+
+
+    LDX #0
+    LDA #0
+
+    ; zero out score
+    STA score_value X
+    INX
+    STA score_value x
+    INX
+    STA score_value X
+    INX
+    STA score_value x
+    
+    JSR update_score
+
+    RTS
+
+; Update the four score tiles to match the four score bytes
+.update_score
+
+    LDX #0
+    LDY #3
+    .us_loop
+        LDA score_value x
+        STA score_tile_loc Y
+
+        DEY
+        INX 
+        CPX #4
+        BNE us_loop
+    RTS
+
+; use this for counterstop (score overflow)
+.as_set_score_nines
+    LDX #0
+    LDA #9
+    STA score_value X
+    INX
+    STA score_value X
+    INX
+    STA score_value X
+    INX
+    STA score_value X
+    JMP end_add_score
+
+.add_score
+    LDX #0
+
+    ; if x > 3, set all to 99
+    ; else:
+    ; add score to xth number
+    ; if > 9, set to zero, continue to next number
+
+    .as_loop
+        TXA 
+        CMP #4
+        BCS as_set_score_nines ; counterstop check
+
+        INC score_value x
+        LDA score_value x
+        CMP #$A
+        BCC end_add_score
+
+        LDA #0
+        STA score_value x
+        INX
+        JMP as_loop
+
+    .end_add_score
+    JSR update_score
+    RTS
+
+; Initialize player sprite
+; Subroutine: loads the correct sprite tiles/attributes for the player's tank.
+.init_player_sprite
+    ; Sprite 0: top left
+    ; Sprite 1: top right
+    ; Sprite 2: bottom left
+    ; Sprite 3: bottom right
+    
+    LDX #0
+    LDA #$30    ; upper tank
+    LDY #$10    ; transparency, palette 0
+
+    STA player_sprites x
+    STY player_atts x
+    INX
+    LDY #$90    ; x mirror, transparency
+    STA player_sprites x
+    STY player_atts x
+    INX
+
+    LDA #$31    ; lower tank
+    LDY #$10        
+    STA player_sprites X
+    STY player_atts X
+    INX
+    LDY #$90    ; x mirror, transparency
+    STA player_sprites X
+    STY player_atts X
+
+    ; Initialize the sprite table
+    LDX #3
+    .init_player_sprite_loophead
+        LDA player_sprites X
+        STA sprite_tile X
+        LDA player_atts X
+        STA sprite_att X
+        DEX
+        CPX #$FF
+        BNE init_player_sprite_loophead
+
+    RTS
+
+; Initialize enemy sprite
+; Subroutine: loads the correct sprite tiles/attributes for the enemy invaders.
+.init_invader_sprite
+    ; Sprite 0: top left
+    ; Sprite 1: top right
+    ; Sprite 2: bottom left
+    ; Sprite 3: bottom right
+
+    LDX #0
+    LDA #$33    ; upper invader
+    LDY #$17    ; transparency, palette 7
+
+    STA invader_sprites x
+    STY invader_atts x
+    INX
+    LDY #$97    ; x mirror, transparency
+    STA invader_sprites x
+    STY invader_atts x
+    INX
+
+    LDA #$34    ; lower invader
+    LDY #$17        
+    STA invader_sprites X
+    STY invader_atts X
+    INX
+    LDY #$97    ; x mirror, transparency
+    STA invader_sprites X
+    STY invader_atts X
+
+    ; Initialize the sprite table for the invaders
+    LDY #6
+    .init_invader_sprite_outerloop
+        LDX #0
+        .init_invader_sprite_loophead
+            LDA invader_sprites X
+            STA sprite_tile Y
+            LDA invader_atts X
+            STA sprite_att y
+            INX
+            INY
+            CPX #4
+            BNE init_invader_sprite_loophead
+        CPY #133
+        BCC init_invader_sprite_outerloop
+    RTS
+
+; Place the invaders at the correct screen coordinates
+    .iid_i
+    dat 4
+    .iid_j
+    dat 8
+    .iid_xp
+    dat 16
+    .iid_yp
+    dat 16
+
+    .inv_count $10
+.init_invader_data
+    LDX #0
+
+    LDA #16
+    STA iid_yp
+
+    LDA #4
+    STA iid_i ; reset outer loop
+
+    .iid_iloop
+        LDA #8
+        STA iid_j ; reset inner loop
+        LDA #16
+        STA iid_xp
+
+        .iid_jloop
+            LDA iid_xp
+            STA invader_data x
+            INX
+            LDA iid_yp
+            STA invader_data x
+            
+            INX ; setup isAlive and direction and stuff here.
+            LDA #$80 ; alive, facing right
+            ;LDA #$00
+            STA invader_data X
+
+            LDA iid_i
+            AND #01 ; check to see if it's an odd numbered row
+            BEQ iid_postbeq
+                LDA #$81 ; alive, facing left
+                ;LDA #$01
+                STA invader_data X
+            .iid_postbeq
+
+            INX ; skip over the distance, that's only relevant when the invader is moving downwards.
+            INX
+
+            CLC
+            LDA iid_xp
+            ADC #32
+            STA iid_xp
+
+            INC inv_count
+
+        DEC iid_j
+        BNE iid_jloop
+
+        LDA iid_yp
+        CLC
+        ADC #20
+        STA iid_yp
+    
+    DEC iid_i
+    BNE iid_iloop
+
+    ; set invader variables
+    LDA #1
+    STA invader_speed
+    LDA #32
+    STA invader_count
+    LDA #16
+    STA invader_threshold
+
+    LDX #low invader_data
+    LDY #high invader_data
+
+    JSR syscall_print_mem_page
+    RTS
+
+; Update player sprite
+; Subroutine: Updates the first four sprites in the sprite tables, which are the four parts of the player tank.
+.update_player_sprite
+    ; Sprite 0: top left, x: -8 y: -8
+    ; Sprite 1: top right, x: 0 y: -8
+    ; Sprite 2: bottom left, x: -8 y: 0
+    ; Sprite 3: bottom right, x: 0 y: 0
+
+    LDX #0 ; first sprite
+
+    SEC     ; riiiight, for subtraction, you have to set the carry flag before starting an operation.
+            ; I am not 100% sure why this is but that's how the 6502 worked so I'm trusting the designers of that knew what they were doing.
+    LDA player_x
+    SBC #8
+    STA sprite_x X
+    LDA player_y
+    SEC
+    SBC #8
+    STA sprite_y X
+
+    SEC
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y
+    SBC #8
+    STA sprite_y x
+
+    SEC
+    INX
+    LDA player_x
+    SBC #8
+    STA sprite_x X
+    LDA player_y
+    STA sprite_y X
+
+    INX
+    LDA player_x
+    STA sprite_x x
+    LDA player_y
+    STA sprite_y x
+
+    RTS
+
+; Same as update player sprite but for the invader.
+    .cur_invader_x
+    dat 0
+    .cur_invader_y
+    dat 0
+    .cur_invader
+    dat 0
+.update_invader_sprites
+    ; Sprite 0: top left, x: -8 y: -8
+    ; Sprite 1: top right, x: 0 y: -8
+    ; Sprite 2: bottom left, x: -8 y: 0
+    ; Sprite 3: bottom right, x: 0 y: 0
+
+    LDA #0
+    STA cur_invader
+    .update_invader_sprite_outerloop
+
+        LDY cur_invader
+        TYA
+        SHL
+        SHL ; multiply by 4
+        TAY ; store current invader pointer in y register
+
+        LDX cur_invader
+        TXA
+        SHL
+        SHL ; multiply by 4
+        CLC
+        ADC #6 ; apply sprite offset
+        TAX
+
+        LDA invader_data y
+        STA cur_invader_x
+        INY
+        LDA invader_data Y
+        STA cur_invader_y
+
+        INY
+        ; check if invader is alive. If not, set the sprite to invalid coord.
+        LDA invader_data Y
+        BMI uis_drawsprites
+            ;invalidate sprite coords
+            LDA #0
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            INX
+            STA sprite_x x
+            JMP update_invader_sprite_breakpoint
+
+        ; Draw the sprite
+        .uis_drawsprites
+
+        LDY #0
+
+        SEC
+        LDA cur_invader_x
+        SBC #8
+        STA sprite_x X
+        LDA cur_invader_y
+        SEC
+        SBC #8
+        STA sprite_y X
+        LDA invader_atts y ; grab the palette info from RAM
+        STA sprite_att X
+        INY
+
+        SEC
+        INX
+        LDA cur_invader_x
+        STA sprite_x x
+        LDA cur_invader_y
+        SBC #8
+        STA sprite_y x
+        LDA invader_atts y
+        STA sprite_att X
+        INY
+
+        SEC
+        INX
+        LDA cur_invader_x
+        SBC #8
+        STA sprite_x X
+        LDA cur_invader_y
+        STA sprite_y X
+        LDA invader_atts y
+        STA sprite_att X
+        INY
+
+        INX
+        LDA cur_invader_x
+        STA sprite_x x
+        LDA cur_invader_y
+        STA sprite_y x
+        LDA invader_atts y
+        STA sprite_att X
+
+        .update_invader_sprite_breakpoint
+        INC cur_invader
+        LDA cur_invader
+        CMP #32
+        BCC update_invader_sprite_outerloop
+    RTS
+
+; Read key input and move the player
+    ; Total player speed, about 2.5 ppf
+        .move_player_speed
+        dat $02
+        .move_player_subspeed
+        dat $80
+.move_player
+    LDX #38 ; left arrow
+    LDA keyboard_pos X
+    CMP #00
+    BEQ move_player_after_left_check
+        SEC
+        LDA player_subx
+        SBC move_player_subspeed
+        STA player_subx
+        LDA player_x
+        SBC move_player_speed
+        STA player_x
+        .move_player_after_left_check
+
+    LDX #39 ; right arrow
+    LDA keyboard_pos X
+    CMP #00
+    BEQ move_player_after_right_check
+        CLC
+        LDA player_subx
+        ADC move_player_subspeed
+        STA player_subx
+        LDA player_x
+        ADC move_player_speed 
+        STA player_x
+        .move_player_after_right_check
+
+    RTS
+
+; Subroutine to update all space invaders:
+    ;1. update motion
+    ;2. test collision
+    ;3. update sprites
+.update_invaders
+    JSR move_invaders
+    JSR update_invader_sprites
+    RTS
+
+; Move invaders subroutine
+    .inv_max_distance
+    dat 20
+    .mi_i
+    dat 32
+
+    .cur_inv_x
+    dat 0
+    .cur_inv_y
+    dat 0
+    .cur_inv_distance
+    dat 0
+    .cur_inv_alive
+    dat 0
+    .cur_inv_dir
+    dat 0
+    .cur_inv
+    dat 0
+
+    .mi_move_right
+        LDA cur_inv_x
+        CLC
+        ADC invader_speed
+        STA cur_inv_x
+        
+        CMP #240
+        BCC mi_loop_continue_0 ; if it's not reached the end, just skip next code
+            LDA #0
+            STA cur_inv_distance
+            LDA #2 ; switch to downright
+            STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_left
+        SEC
+        LDA cur_inv_x
+        SBC invader_speed
+        STA cur_inv_x
+        LDA #16 
+        CMP cur_inv_x ; reverse of above operation
+        BCC mi_loop_continue_0
+            LDA #0
+            STA cur_inv_distance
+            LDA #3 ; switch to downleft
+            STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_downright
+        LDA #1	; switch to left
+        STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .mi_move_downleft
+        LDA #0	; switch to right
+        STA cur_inv_dir
+        JMP mi_loop_continue_0
+
+    .move_invaders
+        LDA #0
+        STA cur_inv
+
+        LDA #32
+        STA mi_i
+
+        .mi_i_loop
+            ; initialize data variables from the invader table
+            LDA cur_inv
+            SHL
+            SHL ; multiply by 4
+            TAX
+
+            LDA invader_data x
+            STA cur_inv_x
+            INX
+            LDA invader_data x
+            STA cur_inv_y
+            INX
+            LDA invader_data x
+            AND #$80
+            STA cur_inv_alive
+            BEQ mi_loop_continue_dead ; we don't care about anything else if it's dead.
+            LDA invader_data x
+            AND #$03 ; get the low two bits
+            STA cur_inv_dir ;right, left, downright, downleft
+
+            INX
+            LDA invader_data x
+            STA cur_inv_distance
+
+            LDA cur_inv_dir
+            CMP #0 ; check right
+            BEQ mi_move_right
+
+            CMP #1 ; check left
+            BEQ mi_move_left
+
+            ; If it gets this far, it's moving down
+            CLC
+            LDA cur_inv_y
+            ADC invader_speed
+            STA cur_inv_y
+            CLC
+            LDA cur_inv_distance
+            ADC invader_speed
+            STA cur_inv_distance
+
+            CMP inv_max_distance
+            BCC mi_loop_continue_0 ; if the distance is not greater than or equal to max distance, continue
+            
+            LDA cur_inv_dir
+            CMP #2
+            BEQ mi_move_downright
+
+            JMP mi_move_downleft ; if it gets this far, move downleft
+
+            .mi_loop_continue_0
+            ; put the data back into the invader table
+            LDA cur_inv
+            SHL
+            SHL ; multiply by 4
+            TAY
+
+            LDA cur_inv_x
+            STA invader_data y
+            INY
+            LDA cur_inv_y
+            STA invader_data y
+            INY
+            LDA cur_inv_dir
+            ORA #$80 ; set alive to true
+            STA invader_data y
+            INY
+            LDA cur_inv_distance
+            STA invader_data y
+
+            ; check collision here
+            JSR test_invader_collision
+            
+        .mi_loop_continue_dead
+        INC cur_inv
+
+
+        DEC mi_i
+        BNE mi_i_loop
+        RTS
+
+; Test invader collision: called after moving each invader.
+; Uses variables from move_invaders
+    .ic_left
+    dat 0
+    .ic_right
+    dat 0
+    .ic_bottom
+    dat 0
+    .ic_top
+    dat 0
+.test_invader_collision
+    LDA cur_inv_x
+    STA ic_left
+    STA ic_right
+    LDA cur_inv_y
+    STA ic_bottom
+    STA ic_top
+
+    SEC
+    LDA ic_left
+    SBC #8
+    STA ic_left
+
+    SEC 
+    LDA ic_top
+    SBC #8
+    STA ic_top
+
+    CLC
+    LDA ic_right
+    ADC #8
+    STA ic_right
+
+    CLC
+    LDA ic_bottom
+    ADC #8
+    STA ic_bottom
+
+    LDA ic_left
+    CMP player_bullet_x
+    BCS ic_continue
+
+    LDA player_bullet_x
+    CMP ic_right
+    BCS ic_continue
+
+    LDA ic_top
+    CMP player_bullet_y
+    BCS ic_continue
+
+    LDA player_bullet_y
+    CMP ic_bottom
+    BCS ic_continue
+
+    ; kill invader
+    JSR kill_current_invader
+
+    .ic_continue
+
+    RTS
+
+; Make sure to have the cur_inv variable set before calling this
+.kill_current_invader
+    LDA cur_inv
+    SHL
+    SHL
+    TAX
+    INX
+    INX ; move x index to 'alive' part
+    LDA #$00
+    STA invader_data x
+
+    DEC invader_count
+    LDA invader_count
+    CMP invader_threshold
+    BNE kci_end ; whenever you kill enough invaders, they will increase speed
+        INC invader_speed
+        SHR invader_threshold
+
+        ; change invader color palette
+        LDY #4
+        LDX #0
+        .kci_colorloop
+            INC invader_atts X
+            INX
+            DEY
+            BNE kci_colorloop
+
+    .kci_end
+
+    JSR add_score
+
+    JSR deactivate_player_bullet
+
+    ; if count = 0, spawn new invaders
+    LDA invader_count
+    BNE #6
+        JSR init_invader_sprite
+        JSR init_invader_data
+
+    RTS
+
+; subroutine to deactivate player bullet and hide its sprite.
+    .update_player_bullet_bspeed
+    dat $6
+.deactivate_player_bullet
+    LDA #0
+    STA ?player_bullet_active ; update the 'active' boolean
+
+    LDX player_bullet_sprite_index
+    LDA #-1
+    STA sprite_x X
+    STA sprite_y X
+    STA player_bullet_y
+    RTS
+
+; Update the position and sprite of player bullet
+.update_player_bullet
+
+    ; What we want to do: decrease bullet y position to move it up the screen. When it reaches the top, move it to the player position.
+    ; How to do it? 
+    
+    ; Check if active
+    ; if not, check if z pressed
+    ;   if z pressed, activate bullet, set its position to player position
+    ; if so, 
+        ; increase y position
+        ; if carry clear (subtraction underflow), deactivate bullet
+        ; else:
+    ; If active,
+        ; Set sprite x to bullet x - 4
+        ; Set sprite y to bullet y - 4
+    ; otherwise, set sprite x to -1
+
+    LDA ?player_bullet_active
+    CMP #00
+    BEQ update_player_bullet_branch_inactive
+        ; stuff to do if it's active
+        SEC
+        LDA player_bullet_y
+        SBC update_player_bullet_bspeed     ; subtract the bullet speed from the bullet y position
+        STA player_bullet_y
+
+        ; if there was no subtraction overflow (underflow), skip this code.
+        BCS update_player_bullet_no_overflow
+            JSR deactivate_player_bullet
+            RTS
+        .update_player_bullet_no_overflow
+
+        ; update the sprite
+        LDX player_bullet_sprite_index
+
+        SEC
+        LDA player_bullet_x
+        SBC #4
+        STA sprite_x X
+
+        SEC 
+        LDA player_bullet_y
+        SBC #4
+        STA sprite_y X
+        RTS
+    .update_player_bullet_branch_inactive
+
+    ; Check for Z key
+    LDX #35 ; z keycode
+    LDA keyboard_pos x
+    CMP #0 
+    BEQ update_player_bullet_after_zcheck
+        ; if you're not pressing z, this will be skipped
+        LDA #1
+        STA ?player_bullet_active ;activate the bullet
+
+        ; go to player's position
+        LDA player_x
+        STA player_bullet_x
+        LDA player_y
+        SEC
+        SBC #8
+        STA player_bullet_y
+    
+    .update_player_bullet_after_zcheck
+
+    RTS
+
+; Subroutines: Test bullet collision on the rocks.
+; If collision is true, destroy the rock and deactivate the bullet.
+    
+    ; Variables:
+        .tbc_xdiv
+        dat $0
+        .tbc_ydiv
+        dat $0
+
+        .tbc_printf_target
+        dat "page, offset, value: "
+        dat $0 $3
+
+        .tbc_tile_page ; which page the testing tile is on.
+        dat $0 $0
+        .tbc_tile_value
+        dat $0
+
+        .tbc_tile_x
+        dat $0
+        .tbc_tile_y
+        dat $0
+
+        .tbc_proper_tile_address
+        dat $0 $0
+
+        .tbc_proper_att_address
+        dat $0 $0
+
+    ; subroutine to take x and y registers as tile coords, and put the page and offset in tile_page
+    .tbc_get_tile_value
+        ; (tile_y * 32) + tile_x = tile value
+
+        STX tbc_tile_x
+        STY tbc_tile_y
+
+        LDY #0
+        LDX #1
+        STY tbc_tile_page X
+
+        LDY tbc_tile_y
+        STY tbc_tile_page ; divide tile y by 8 and put it in tile_page
+        SHR tbc_tile_page
+        SHR tbc_tile_page
+        SHR tbc_tile_page
+
+        LDY #5  ; multiply by 32
+        .tbc_get_tile_value_loop
+            SHL tbc_tile_y
+            DEY
+            BNE tbc_get_tile_value_loop 
+        
+        ; Add up to get proper tile offset
+        LDX #1
+        CLC
+        LDA tbc_tile_page x
+        ADC tbc_tile_x
+        ADC tbc_tile_y
+        STA tbc_tile_page x
+
+        RTS
+
+    ; Ball tile: E4
+    ; how to check tile collision?
+
+    ; take bullet x coord, y coord
+    ; divide each by 8
+    ; test the tile at that coordinate
+    ; if it's not $FF, make it $FF and deactivate bullet
+
+    ; Test the player's bullet colliding against the blocks.
+    .test_bullet_collision
+        LDA ?player_bullet_active
+        CMP #00
+        BNE #1
+            RTS ; end the subroutine if the bullet is inactive
+        
+        LDX player_bullet_x
+        LDY player_bullet_y
+
+        STX tbc_xdiv
+        STY tbc_ydiv
+
+        SHR tbc_xdiv
+        SHR tbc_xdiv
+        SHR tbc_xdiv
+
+        SHR tbc_ydiv
+        SHR tbc_ydiv
+        SHR tbc_ydiv
+        
+        LDX tbc_xdiv
+        LDY tbc_ydiv
+        JSR tbc_get_tile_value
+
+        ; Set up indirection for tile
+            LDA #hi tile_map_p1
+            LDX #1
+            STA tbc_proper_tile_address x
+            LDA tbc_tile_page
+            CLC 
+            ADC tbc_proper_tile_address x
+            STA tbc_proper_tile_address x
+
+            LDA #lo tile_map_p1
+            STA tbc_proper_tile_address
+        
+        LDX #1
+        LDY tbc_tile_page x
+        LDA (tbc_proper_tile_address) Y ; get the tile.
+        CMP #$FF
+        BNE #1   ; If the tile's blank, skip the rest of the subroutine
+            RTS
+
+        ; Set up indirection for attribute
+            LDA #hi tile_att_p1
+            LDX #1
+            STA tbc_proper_att_address x
+            LDA tbc_tile_page
+            CLC 
+            ADC tbc_proper_att_address x
+            STA tbc_proper_att_address x
+
+            LDA #lo tile_att_p1
+            STA tbc_proper_att_address
+        
+        ; Deactivate the bullet
+            JSR deactivate_player_bullet
+
+        ; remove the tile
+        LDX #1
+        LDA #$FF
+        LDY tbc_tile_page x
+        STA (tbc_proper_tile_address) Y ; set the tile.
+        RTS
+
+
+;===============================================================================================
+;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+.program_begin ; PROGRAM STARTS HERE
+;|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+;===============================================================================================
+
+JSR load_graphics
+
+;LDA #$36
+;LDY #$06
+LDA #$FF
+LDY #0
+JSR clear_tiles
+
+; Set background color
+    LDX #0
+    LDA #32
+    STA bgcolor_pos X
+    INX
+    LDA #92
+    STA bgcolor_pos X
+    INX
+    LDA #153
+    STA bgcolor_pos X
+
+JSR init_ground
+JSR init_player_sprite
+JSR init_invader_sprite
+
+JSR init_blocks
+
+JSR init_score_display
+
+JSR init_invader_data
+
+; Initialize bullet sprite
+LDX player_bullet_sprite_index
+LDA player_bullet_tile ; bullet tile
+STA sprite_tile x
+
+LDA player_bullet_att ; bullet attributes- palette 4 (red/orange)
+STA sprite_att X
+
+; Initialize player's position
+LDA #128
+STA player_x
+
+LDA #-32
+STA player_y
+
+; initialize bullet position to an invalid coord so it is hidden by default
+LDA #-1 ; -1 resolves to $FF
+STA player_bullet_x
+STA player_bullet_y
+
+LDA player_bullet_x
+STA sprite_x x
+STA sprite_y x
+
+JSR update_player_sprite
+JSR update_invader_sprites
+
+;JSR print_sprite_mem 
+
+; Main loop
+.program_main_loop
+
+    JSR check_for_quit  ; check for quit also gets the keyboard input
+
+    ; keycode 38: left
+    ; keycode 39: right
+    ; keycode 35: z
+
+    JSR move_player
+    JSR update_player_sprite
+    JSR update_player_bullet
+
+    JSR test_bullet_collision
+
+    JSR update_invaders
+
+    LDA #100
+    STA 0   ; graphics refresh system call
+
+    LDX #16 ; delay for 1/60 second
+    ;LDX #$FF
+    LDY #0
+    JSR delay_millis
+
+    JMP program_main_loop
+
+.end_program
+INC 0 ; quit
+
+; Data section
+
+    .graphics_file
+    dat "newgame"
+    dat 0   ; null terminator, as it's not added automatically by the assembler (possible future todo)
+
+    .palette_file
+    dat "invaderspalette"
+    dat 0
+
+    ; Information about the floor tiles.
+    .floor_tiles
+    dat $F1 ; top row, use edge tile
+    dat $F0 ; bottom row, use normal ground tile
+
+    .floor_attributes
+    dat $A3 ; flip vertical and mirror, use palette 3
+    dat $03 ; no mirroring, use palette 3
+
+    ; sprite indexes
+    .player_bullet_sprite_index
+    dat $4 ; bullet is the fourth sprite
+
+    .player_bullet_tile
+    dat $32
+    .player_bullet_att
+    dat $14 ; palette 4, use transparency
+
+    .block_tile
+    dat $E4
+    .block_attributes
+    dat $13
+
+

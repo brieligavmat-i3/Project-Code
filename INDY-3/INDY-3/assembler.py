@@ -1,6 +1,8 @@
 # Tool to assemble a text file of assembly instructions into actual bytes to be read by the VM
 # Author: Matthew Watson
 
+import os
+
 from enum import Enum
 
 class Instr_class(Enum):
@@ -566,8 +568,11 @@ else:
     filename = argv[1]
     PROGRAM_COUNTER_ENTRY_POINT = int(argv[2])
 
-assemble_file("tests/"+filename)
+assemble_file(filename)
+#print(named_addresses)
+#print(locations_to_replace)
 
 immut_bytes = bytes(working_bytes)
-with open(f"outs/{filename.split('.')[0]}.kvmbin", mode='wb') as file:
+base_filename = os.path.basename(filename)
+with open(f"outs/{base_filename.split('.')[0]}.kvmbin", mode='wb') as file:
     file.write(immut_bytes)

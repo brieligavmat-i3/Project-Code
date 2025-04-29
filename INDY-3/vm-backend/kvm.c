@@ -21,6 +21,7 @@
 
 // System calls
 #define SYSCALL_QUIT 1
+#define SYSCALL_PRINT_MEM_PAGE 253
 #define SYSCALL_PRINTCPU 255
 #define SYSCALL_PRINTF 254
 
@@ -74,7 +75,7 @@ static size_t file_get_size(FILE* file) {
 static int load_binary_file_to_memory(const char* filename, size_t offset) {
 	FILE* code_file = fopen(filename, "rb"); // open the file to read bytes
 	if (!code_file) {
-		printf("Error opening binary file.\n");
+		printf("Error opening binary file %s.\n", filename);
 		return -1;
 	}
 
@@ -95,33 +96,54 @@ static int load_binary_file_to_memory(const char* filename, size_t offset) {
 int kvm_load_instructions(const char* filename) {
 	if (!cpu || !mem) return -1;
 
-	char sys_string[100] = "python assembler.py ";
-
+	char sys_string[256]; // Increased buffer size to prevent overflow
 	char prog_count_str[20];
-	sprintf(prog_count_str, "%d", INSTRUCTION_ROM_MEM_LOC);
 
-	strcat(sys_string, filename);
-	strcat(sys_string, ".txt ");
-	strcat(sys_string, prog_count_str);
-	if (strnlen(sys_string, 100) == 100) {
-		printf("Error with strings.\n");
-		return -1;
+	snprintf(prog_count_str, sizeof(prog_count_str), "%d", INSTRUCTION_ROM_MEM_LOC);
+
+	// Ensure we do not append `.txt` if it's already there
+	if (strstr(filename, ".txt") == NULL) {
+		snprintf(sys_string, sizeof(sys_string), "python assembler.py %s.txt %s", filename, prog_count_str);
+	}
+	else {
+		snprintf(sys_string, sizeof(sys_string), "python assembler.py %s %s", filename, prog_count_str);
 	}
 
-	// Run the python script.
+	printf("Executing: %s\n", sys_string); // Debug output
+
+	// Run the Python script
 	if (system(sys_string)) return -1;
 
-	char out_file_name[100] = "outs/";
-	strcat(out_file_name, filename);
-	strcat(out_file_name, ".kvmbin");
+		
+	// Extract the base filename from the full path (correct handling)
+	const char* base_filename = strrchr(filename, '\\');
+	if (base_filename) {
+		base_filename++;  // Skip the '\\' itself
+	}
+	else {
+		base_filename = filename;  // If no path, use the whole filename
+	}
 
-	printf("binary file name: %s\n", out_file_name);
+	// Now remove the ".txt" extension, if it exists
+	char out_file_name[256];
+	const char* dot_pos = strrchr(base_filename, '.');
+	if (dot_pos) {
+		snprintf(out_file_name, sizeof(out_file_name), "outs/%.*s.kvmbin", (int)(dot_pos - base_filename), base_filename);
+	}
+	else {
+		snprintf(out_file_name, sizeof(out_file_name), "outs/%s.kvmbin", base_filename);
+	}
+
+	printf("Binary file name: %s\n", out_file_name); // Debug output
+
 
 	int load_result = load_binary_file_to_memory(out_file_name, INSTRUCTION_ROM_MEM_LOC);
 	if (load_result != 0) return -1;
 
 	return 0;
 }
+
+
 
 // Runs the python scripts to load in the graphics, then puts the data in their proper ROM spots.
 int kvm_load_graphics(const char* tile_filename, const char* palette_filename) {
@@ -204,6 +226,7 @@ static uint16_t load_string(char* str, uint16_t start_location, uint16_t max_len
 int kvm_start(int max_cycles) {
 	if (!cpu || !mem) return -1;
 
+
 	// Cpu cycle until system calls happen.
 	size_t cycle_count = 0;
 
@@ -235,7 +258,7 @@ int kvm_start(int max_cycles) {
 				char* print_string = malloc(256);
 				uint16_t str_end_pt = load_string(print_string, syscall_addr, 256);
 				uint8_t bytes_to_print = kvm_memory_get_byte(mem, str_end_pt);
-				printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
+				//printf("addr: %x endpt: %x bytes: %x\n",syscall_addr,  str_end_pt, bytes_to_print);
 				printf("%s ", print_string);
 
 				for (int i = 0; i < bytes_to_print; i++) {
@@ -315,6 +338,11 @@ int kvm_start(int max_cycles) {
 			case SYSCALL_GPU_REFRESH:
 				kvm_gpu_refresh_graphics(mem);
 				break;
+			case SYSCALL_PRINT_MEM_PAGE:
+				{
+					// Print one page of memory starting at the specified address.
+					kvm_memory_print_hexdump(mem, syscall_addr, 256);
+				}break;
 			}
 
 			mem->data[0] = 0;
